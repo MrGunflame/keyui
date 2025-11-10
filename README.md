@@ -1,7 +1,11 @@
-# Tauri + SvelteKit + TypeScript
+# Key UI
 
-This template should help get you started developing with Tauri, SvelteKit and TypeScript in Vite.
+## Building
 
-## Recommended IDE Setup
+Follow https://tauri.app/start/prerequisites/ to install build dependencies.
 
-[VS Code](https://code.visualstudio.com/) + [Svelte](https://marketplace.visualstudio.com/items?itemName=svelte.svelte-vscode) + [Tauri](https://marketplace.visualstudio.com/items?itemName=tauri-apps.tauri-vscode) + [rust-analyzer](https://marketplace.visualstudio.com/items?itemName=rust-lang.rust-analyzer).
+To start the dev server run: `npm install && npm run tauri dev`
+
+To build the binaries run `npm install && npm run tauri build`.
+The final build artifacts are located in `src-tauri/target/release`.
+See [Tauri docs](https://tauri.app/distribute/) for more details.
