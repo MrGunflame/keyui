@@ -1,4 +1,6 @@
 <script lang="ts">
+  import Header from './Header.svelte';
+
   import { invoke } from "@tauri-apps/api/core";
 
   let name = $state("");
@@ -11,12 +13,8 @@
   }
 </script>
 
-<div class="header">
-  <span class="header-entry">File</span>
-  <span class="header-entry">Tab2</span>
-</div>
-
 <main class="container">
+  <Header />
   
   <h1>Welcome to Tauri + Svelte</h1>
 
@@ -47,16 +45,6 @@ div {
   margin: 0px;
 }
 
-.header {
-  padding: 3px;
-  border-bottom: 1px solid black;
-}
-
-.header-entry {
-  padding: 1px;
-  border: 1px solid black;
-}
-
 .logo.vite:hover {
   filter: drop-shadow(0 0 2em #747bff);
 }
@@ -83,7 +71,7 @@ div {
 
 .container {
   margin: 0;
-  padding-top: 10vh;
+  //padding-top: 10vh;
   display: flex;
   flex-direction: column;
   justify-content: center;
