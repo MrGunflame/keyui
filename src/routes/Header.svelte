@@ -7,10 +7,12 @@
 
     function toggleMenu() {
         file_menu_active ^= true;
+        big_button = false;
     }
 
     function toggleBigButton() {
         big_button ^= true;
+        file_menu_active = false;
     }
 
 </script>
