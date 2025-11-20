@@ -40,11 +40,6 @@
 
 <style>
 
-div {
-  border: 1px solid red;
-  margin: 0px;
-}
-
 .logo.vite:hover {
   filter: drop-shadow(0 0 2em #747bff);
 }
@@ -59,8 +54,13 @@ div {
   line-height: 24px;
   font-weight: 400;
 
+  /* Old light style
   color: #0f0f0f;
   background-color: #f6f6f6;
+  */
+  
+  color: #f6f6f6;
+  background-color: #2f2f2f;
 
   font-synthesis: none;
   text-rendering: optimizeLegibility;

@@ -3,19 +3,47 @@
     import FilePicker from './FilePicker.svelte';
 
     let file_menu_active = $state(false);
+    let big_button = $state(false);
 
     function toggleMenu() {
         file_menu_active ^= true;
     }
+
+    function toggleBigButton() {
+        big_button ^= true;
+    }
+
 </script>
 
 <div class="header">
-    <ul>
+    <ul class="top-menu">
         <li>
             <button onclick={toggleMenu}>File</button>
             {#if file_menu_active}
             <Menu>
-                <FilePicker>Open</FilePicker>
+                <ul class="submenu">
+                    <li>
+                        <FilePicker>Open</FilePicker>
+                    </li>
+                </ul>
+            </Menu>
+            {/if}
+        </li>
+        <li>
+            <button onclick={toggleBigButton}>Big Button</button>
+            {#if big_button}
+            <Menu>
+                <ul class="submenu">
+                    <li>
+                        <button>Button A</button>
+                    </li>
+                    <li>
+                        <button>Button B</button>
+                    </li>
+                    <li>
+                        <button>Button C</button>
+                    </li>
+                </ul>
             </Menu>
             {/if}
         </li>
@@ -25,22 +53,57 @@
 
 <style>
 
-.header {
-    padding: 3px;
+.header button {
+    box-shadow: none;
 }
 
-.header ul {
+.header button:hover {
+    background-color: #555;
+    border-radius: 0;
+}
+
+.header {
+    padding: 8px 15px;
+    background-color: #222;
+    color: white;
+    border-bottom: 2px solid gray;
+}
+
+.top-menu {
     display: flex;
     list-style-type: none;
     margin: 0;
     padding: 0;
 }
 
-.header li {
+.top-menu li {
     display: inline-block;
 }
 
-.header button {
+.top-menu button {
+    padding: 4px 10px;
+    background-color: transparent;
+    border: none;
+    color: white;
+    cursor: pointer;
+}
+
+.submenu {
+    display: flex;
+    align-items: flex-start;
+    flex-direction: column;
+    /* No padding so that it aligns with the top menu button. */
+    padding: 0;
+    background-color: #333;
+    border: 1px solid #444;
+}
+
+.submenu button {
+    padding: 7px;
+}
+
+.submenu button:hover {
+    background-color: #555;
 }
 
 </style>
