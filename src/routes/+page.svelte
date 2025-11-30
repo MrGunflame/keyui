@@ -9,7 +9,11 @@
   async function greet(event: Event) {
     event.preventDefault();
     // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
-    greetMsg = await invoke("greet", { name });
+    //greetMsg = await invoke("greet", { name });
+    greetMsg = await invoke("send_msg", {
+      "method": "meta/version",
+      "params": null,
+    });
   }
 </script>
 
