@@ -13,10 +13,12 @@
 
             console.log(method);
 
-            let resp_json = invoke("send_msg", {
+            let resp_json = await invoke("send_msg", {
                 "method": method,
                 "params": payload,
             });
+
+            console.log(resp_json);
 
             resp = JSON.stringify(resp_json);
         } catch (e) {}
