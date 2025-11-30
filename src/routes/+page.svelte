@@ -1,5 +1,6 @@
 <script lang="ts">
   import Header from './Header.svelte';
+  import Api from './Api.svelte';
 
   import { invoke } from "@tauri-apps/api/core";
 
@@ -19,6 +20,7 @@
 
 <main class="container">
   <Header />
+  <Api />
   
   <h1>Welcome to Tauri + Svelte</h1>
 

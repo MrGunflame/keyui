@@ -102,7 +102,7 @@ impl Connection {
             self.buf.copy_within(bytes_consumed.., 0);
             self.bytes_init -= bytes_consumed;
 
-            return Ok(resp.result.unwrap());
+            return Ok(resp.result.unwrap_or(Value::Null));
         }
     }
 }
