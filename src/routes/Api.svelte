@@ -9,7 +9,10 @@
         e.preventDefault();
 
         try {
-            let payload = JSON.parse(body);
+            let b = body.replaceAll("\\", "\\\\").replaceAll("\n", "\\n");
+            console.log(b);
+            
+            let payload = JSON.parse(b);
 
             console.log(method);
 
@@ -21,13 +24,15 @@
             console.log(resp_json);
 
             resp = JSON.stringify(resp_json);
-        } catch (e) {}
+        } catch (e) {
+            console.log(e);
+        }
     }
 </script>
 
 <div>
     <input bind:value={method} />
-    <input bind:value={body} />
+    <textarea bind:value={body} />
     <button onclick={submit}>Submit</button>
     <span>{resp}</span>
 </div>
