@@ -7,6 +7,7 @@ use std::time::Duration;
 
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
+use thiserror::Error;
 use tokio::sync::{mpsc, oneshot};
 
 static CHANNEL: OnceLock<(mpsc::UnboundedSender<(String, Value, oneshot::Sender<Value>)>)> =
@@ -91,7 +92,7 @@ impl Connection {
         }
     }
 
-    pub fn send<T>(&mut self, method: &str, req: &T) -> Result<(), ()>
+    pub fn send<T>(&mut self, method: &str, req: &T) -> Result<(), io::Error>
     where
         T: Serialize,
     {
@@ -103,31 +104,34 @@ impl Connection {
         };
 
         let buf = serde_json::to_string(&req).unwrap();
+
         let framed = format!("Content-Length: {}\r\n\r\n{}", buf.len(), buf);
-        self.tx.write_all(framed.as_bytes()).unwrap();
+        self.tx.write_all(framed.as_bytes())?;
         Ok(())
     }
 
-    pub fn recv(&mut self) -> Result<Value, io::Error> {
+    pub fn recv(&mut self) -> Result<Value, ReadError> {
         loop {
             if self.buf.len() - self.bytes_init < 256 {
                 self.buf.resize(self.buf.len() * 2, 0);
                 debug_assert!(self.buf.len() - self.bytes_init >= 256);
             }
 
-            let bytes_read = match self.rx.read(&mut self.buf[self.bytes_init..])? {
-                0 => return Err(io::ErrorKind::UnexpectedEof.into()),
-                n => n,
+            let bytes_read = match self.rx.read(&mut self.buf[self.bytes_init..]) {
+                Ok(0) => return Err(ReadError::Io(io::ErrorKind::UnexpectedEof.into())),
+                Ok(n) => n,
+                Err(err) => return Err(ReadError::Io(err)),
             };
 
             self.bytes_init += bytes_read;
 
             let (msg, bytes_consumed) = match parse_message(&self.buf[..self.bytes_init]) {
                 Ok(v) => v,
-                Err(Error::NeedMoreData) => continue,
+                Err(ParseError::NeedMoreData) => continue,
+                Err(err) => return Err(ReadError::Parse(err)),
             };
 
-            let resp = serde_json::from_slice::<Response>(msg).unwrap();
+            let resp = serde_json::from_slice::<Response>(msg).map_err(ReadError::InvalidJson)?;
 
             debug_assert!(self.bytes_init >= bytes_consumed);
             self.buf.copy_within(bytes_consumed.., 0);
@@ -154,28 +158,45 @@ struct Response {
     result: Option<Value>,
 }
 
-#[derive(Copy, Clone, Debug)]
-enum Error {
-    NeedMoreData,
+#[derive(Debug, Error)]
+enum ReadError {
+    #[error(transparent)]
+    Io(io::Error),
+    #[error(transparent)]
+    Parse(ParseError),
+    #[error("invalid json payload: {0}")]
+    InvalidJson(serde_json::Error),
 }
 
-fn parse_message(data: &[u8]) -> Result<(&[u8], usize), Error> {
+#[derive(Debug, Error)]
+enum ParseError {
+    #[error("need more data")]
+    NeedMoreData,
+    #[error("unexpected token {found:?}, expected {expected:?}")]
+    UnexpectedToken { expected: Vec<u8>, found: Vec<u8> },
+    #[error("invalid string: {0}")]
+    InvalidString(std::str::Utf8Error),
+    #[error("invalid integer: {0}")]
+    InvalidInt(std::num::ParseIntError),
+}
+
+fn parse_message(data: &[u8]) -> Result<(&[u8], usize), ParseError> {
     let mut parser = Parser {
         data,
         bytes_read: 0,
     };
 
-    // We cannot parse the head until complete.
+    // We cannot parse the header until complete.
     if memchr::memmem::find(parser.data, b"\r\n\r\n").is_none() {
-        return Err(Error::NeedMoreData);
+        return Err(ParseError::NeedMoreData);
     }
 
-    parser.consume_lit(b"Content-Length: ");
-    let payload_len = parser.consume_number::<usize>();
-    parser.consume_lit(b"\r\n\r\n");
+    parser.consume_lit(b"Content-Length: ")?;
+    let payload_len = parser.consume_number::<usize>()?;
+    parser.consume_lit(b"\r\n\r\n")?;
 
     if parser.data.len() < payload_len {
-        return Err(Error::NeedMoreData);
+        return Err(ParseError::NeedMoreData);
     }
 
     let payload = parser.advance(payload_len);
@@ -197,33 +218,34 @@ impl<'a> Parser<'a> {
         data
     }
 
-    fn consume_lit(&mut self, lit: &[u8]) {
-        let rem = self.data.strip_prefix(lit).unwrap();
+    fn consume_lit(&mut self, lit: &[u8]) -> Result<(), ParseError> {
+        let rem = self
+            .data
+            .strip_prefix(lit)
+            .ok_or(ParseError::UnexpectedToken {
+                expected: lit.to_vec(),
+                found: self.data.to_vec(),
+            })?;
+
         self.data = rem;
         self.bytes_read += lit.len();
+        Ok(())
     }
 
-    fn consume_number<T>(&mut self) -> T
+    fn consume_number<T>(&mut self) -> Result<T, ParseError>
     where
-        T: FromStr,
-        T::Err: std::fmt::Debug,
+        T: FromStr<Err = std::num::ParseIntError>,
     {
         let end = self
             .data
             .iter()
             .position(|b| !matches!(b, b'0'..=b'9'))
             .unwrap_or(self.data.len());
-        let num_str = std::str::from_utf8(&self.data[..end]).unwrap();
+        let num_str = std::str::from_utf8(&self.data[..end]).map_err(ParseError::InvalidString)?;
 
-        let num = num_str.parse::<T>().unwrap();
+        let num = num_str.parse::<T>().map_err(ParseError::InvalidInt)?;
         self.data = &self.data[end..];
         self.bytes_read += end;
-        num
+        Ok(num)
     }
-}
-
-struct Message {
-    len: u64,
-    method: String,
-    data: String,
 }

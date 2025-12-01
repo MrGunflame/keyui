@@ -29,3 +29,4 @@ memchr = "2.7.6"
 async-io = "2.6.0"
 # Channels
 tokio = { version = "1.48.0", default-features = false, features = ["sync"] }
+thiserror = "2.0.17"
