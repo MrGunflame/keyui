@@ -132,6 +132,7 @@ impl Connection {
             };
 
             let resp = serde_json::from_slice::<Response>(msg).map_err(ReadError::InvalidJson)?;
+            dbg!(&resp);
 
             debug_assert!(self.bytes_init >= bytes_consumed);
             self.buf.copy_within(bytes_consumed.., 0);
