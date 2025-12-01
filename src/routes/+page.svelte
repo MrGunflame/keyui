@@ -1,26 +1,27 @@
 <script lang="ts">
   import Header from './Header.svelte';
   import Api from './Api.svelte';
+  import { Client } from './api.ts';
 
-  import { invoke } from "@tauri-apps/api/core";
+  type AppState = {
+    client: Client,
+    proofs: ProofId[],
+  };
 
-  let name = $state("");
-  let greetMsg = $state("");
+  let appState: AppState = $state({
+    client: new Client(),
+    proofs: [],
+  });
 
-  async function greet(event: Event) {
-    event.preventDefault();
-    // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
-    //greetMsg = await invoke("greet", { name });
-    greetMsg = await invoke("send_msg", {
-      "method": "meta/version",
-      "params": null,
-    });
-  }
 </script>
 
 <main class="container">
-  <Header />
+  <Header {appState} />
   <Api />
+
+  {#each appState.proofs as proof}
+    <span>{proof.proofId}</span>
+  {/each}
   
   <h1>Welcome to Tauri + Svelte</h1>
 
@@ -37,11 +38,6 @@
   </div>
   <p>Click on the Tauri, Vite, and SvelteKit logos to learn more.</p>
 
-  <form class="row" onsubmit={greet}>
-    <input id="greet-input" placeholder="Enter a name..." bind:value={name} />
-    <button type="submit">Greet</button>
-  </form>
-  <p>{greetMsg}</p>
 </main>
 
 <style>

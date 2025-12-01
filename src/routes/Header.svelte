@@ -3,6 +3,8 @@
     import FilePicker from './FilePicker.svelte';
     import { open } from '@tauri-apps/plugin-fs';
 
+    let { appState } = $props();
+
     let file_menu_active = $state(false);
     let big_button = $state(false);
 
@@ -28,9 +30,9 @@
         const text = new TextDecoder().decode(buf);
         await file.close();
 
-        console.log(text);
+        let id = await appState.client.loadKey(text);
+        appState.proofs.push(id);
     }
-
 </script>
 
 <div class="header">
