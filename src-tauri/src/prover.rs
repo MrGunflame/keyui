@@ -1,4 +1,4 @@
-use std::io::{self, Read, Write};
+use std::io::{self, PipeReader, PipeWriter, Read, Write};
 use std::net::TcpStream;
 use std::process::Command;
 use std::str::FromStr;
@@ -24,10 +24,41 @@ pub async fn send_msg(method: String, params: Value) -> Value {
 }
 
 pub fn start_prover() {
-    // Wait until the server is only, hopefully :)
-    std::thread::sleep(Duration::from_secs(2));
+    let (stdin_rx, stdin_tx) = io::pipe().unwrap();
+    let (stdout_rx, stdout_tx) = io::pipe().unwrap();
 
-    let mut conn = Connection::new();
+    std::thread::spawn(move || {
+        let mut jar_path = std::env::current_dir().unwrap();
+        jar_path.push("api.jar");
+
+        let run_cmd = || -> Result<(), Box<dyn std::error::Error>> {
+            let status = Command::new("java")
+                .arg("-jar")
+                .arg(&jar_path)
+                .arg("--std")
+                .stdin(stdin_rx)
+                .stdout(stdout_tx)
+                .spawn()?
+                .wait()?;
+
+            if !status.success() {
+                Err("process exited with non-zero status code".into())
+            } else {
+                Ok(())
+            }
+        };
+
+        if let Err(err) = run_cmd() {
+            eprintln!("Failed to start prover: {}", err);
+            eprintln!(
+                "Please ensure java is available in $PATH and the api is placed at {}",
+                jar_path.to_string_lossy()
+            );
+            std::process::exit(1);
+        }
+    });
+
+    let mut conn = Connection::new(stdin_tx, stdout_rx);
 
     let (tx, mut rx) = mpsc::unbounded_channel::<(String, Value, oneshot::Sender<Value>)>();
     CHANNEL.set(tx).unwrap();
@@ -44,17 +75,17 @@ pub fn start_prover() {
 }
 
 pub struct Connection {
-    socket: TcpStream,
+    tx: PipeWriter,
+    rx: PipeReader,
     buf: Vec<u8>,
     bytes_init: usize,
 }
 
 impl Connection {
-    pub fn new() -> Self {
-        let socket = TcpStream::connect("localhost:5151").unwrap();
-
+    pub fn new(tx: PipeWriter, rx: PipeReader) -> Self {
         Self {
-            socket,
+            tx,
+            rx,
             buf: vec![0; 256],
             bytes_init: 0,
         }
@@ -73,7 +104,7 @@ impl Connection {
 
         let buf = serde_json::to_string(&req).unwrap();
         let framed = format!("Content-Length: {}\r\n\r\n{}", buf.len(), buf);
-        self.socket.write_all(framed.as_bytes()).unwrap();
+        self.tx.write_all(framed.as_bytes()).unwrap();
         Ok(())
     }
 
@@ -84,7 +115,7 @@ impl Connection {
                 debug_assert!(self.buf.len() - self.bytes_init >= 256);
             }
 
-            let bytes_read = match self.socket.read(&mut self.buf[self.bytes_init..])? {
+            let bytes_read = match self.rx.read(&mut self.buf[self.bytes_init..])? {
                 0 => return Err(io::ErrorKind::UnexpectedEof.into()),
                 n => n,
             };
