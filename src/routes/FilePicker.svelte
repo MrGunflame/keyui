@@ -1,6 +1,8 @@
 <script lang="ts">
     import { open } from '@tauri-apps/plugin-dialog';
 
+    let { action, children } = $props();
+
     async function openPicker() {
         const path = await open({
             multiple: false,
@@ -25,9 +27,9 @@
         }
 
         console.log(path);
+        action(path);
     }
 
-    let { children } = $props();
 </script>
 
 <button class="btn" onclick={openPicker}>{@render children?.()}</button>
