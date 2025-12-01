@@ -30,8 +30,10 @@
         const text = new TextDecoder().decode(buf);
         await file.close();
 
-        let id = await appState.client.loadKey(text);
+        const id = await appState.client.loadKey(text);
         appState.proofs.push(id);
+        const desc = await appState.client.proofTreeRoot(id);
+        console.log(desc.name);
     }
 </script>
 

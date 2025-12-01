@@ -17,6 +17,10 @@ export class Client {
     public async loadKey(content: string): Promise<ProofId> {
         return await this.send("loading/loadKey", content);
     }
+
+    public async proofTreeRoot(proof: ProofId): Promise<TreeNodeDesc> {
+        return await this.send("proofTree/root", proof);
+    }
 }
 
 export type ProofId = {
@@ -26,4 +30,14 @@ export type ProofId = {
 
 export type EnvId = {
     envId: string,
+};
+
+export type NodeId = {
+    nodeId: number;
+    proofId: ProofId;
+};
+
+export type TreeNodeDesc = {
+    id: NodeId;
+    name: string;
 };
