@@ -1,6 +1,5 @@
 <script lang="ts">
-  import Header from './Header.svelte';
-
+  import Header from "./Header.svelte";
   import { invoke } from "@tauri-apps/api/core";
   import CodeBlock from "$lib/CodeBlock.svelte";
 
@@ -15,59 +14,13 @@ fn main() {
 
   async function greet(event: Event) {
     event.preventDefault();
-    // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
     greetMsg = await invoke("greet", { name });
   }
 </script>
 
-<<<<<<< HEAD
-=======
-<div class="menu-bar">
-  <div class="menu-item">
-    File
-    <div class="submenu">
-      <div class="submenu-item">New</div>
-      <div class="submenu-item">Open</div>
-      <div class="submenu-item">Save</div>
-      <div class="submenu-item">Exit</div>
-    </div>
-  </div>
-
-  <div class="menu-item">
-    Edit
-    <div class="submenu">
-      <div class="submenu-item">Undo</div>
-      <div class="submenu-item">Redo</div>
-      <div class="submenu-item">Cut</div>
-      <div class="submenu-item">Copy</div>
-      <div class="submenu-item">Paste</div>
-    </div>
-  </div>
-
-  <div class="menu-item">
-    View
-    <div class="submenu">
-      <div class="submenu-item">Zoom In</div>
-      <div class="submenu-item">Zoom Out</div>
-    </div>
-  </div>
-
-  <div class="menu-item">
-    Help
-    <div class="submenu">
-      <div class="submenu-item">Documentation</div>
-      <div class="submenu-item">About</div>
-    </div>
-  </div>
-</div>
-
-
-
-
->>>>>>> 76ff4a9 (Add Rust syntax highlighting component)
 <main class="container">
   <Header />
-  
+
   <h1>Welcome to Tauri + Svelte</h1>
 
   <div class="row">
@@ -81,25 +34,23 @@ fn main() {
       <img src="/svelte.svg" class="logo svelte-kit" alt="SvelteKit Logo" />
     </a>
   </div>
+
   <p>Click on the Tauri, Vite, and SvelteKit logos to learn more.</p>
+
   <section class="code-section">
     <h2>Rust example</h2>
     <CodeBlock language="rust" code={rustExample} />
   </section>
 
-  <form class="row" onsubmit={greet}>
+  <form class="row" on:submit|preventDefault={greet}>
     <input id="greet-input" placeholder="Enter a name..." bind:value={name} />
     <button type="submit">Greet</button>
   </form>
+
   <p>{greetMsg}</p>
 </main>
 
 <style>
-
-<<<<<<< HEAD
-=======
-
->>>>>>> 76ff4a9 (Add Rust syntax highlighting component)
 .logo.vite:hover {
   filter: drop-shadow(0 0 2em #747bff);
 }
@@ -113,20 +64,8 @@ fn main() {
   font-size: 16px;
   line-height: 24px;
   font-weight: 400;
-
-  /* Old light style
-  color: #0f0f0f;
-  background-color: #f6f6f6;
-  */
-  
   color: #f6f6f6;
   background-color: #2f2f2f;
-
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  -webkit-text-size-adjust: 100%;
 }
 
 .container {
@@ -140,7 +79,6 @@ fn main() {
 .logo {
   height: 6em;
   padding: 1.5em;
-  will-change: filter;
   transition: 0.75s;
 }
 
@@ -167,6 +105,16 @@ h1 {
   text-align: center;
 }
 
+.code-section {
+  margin: 2rem auto 0;
+  max-width: 800px;
+  text-align: left;
+}
+
+.code-section h2 {
+  margin-bottom: 0.5rem;
+}
+
 input,
 button {
   border-radius: 8px;
@@ -188,6 +136,7 @@ button {
 button:hover {
   border-color: #396cd8;
 }
+
 button:active {
   border-color: #396cd8;
   background-color: #e8e8e8;
@@ -217,58 +166,10 @@ button {
     color: #ffffff;
     background-color: #0f0f0f98;
   }
+
   button:active {
     background-color: #0f0f0f69;
   }
 }
-.menu-bar {
-  display: flex;
-  gap: 20px;
-  padding: 8px 15px;
-  background-color: #222;
-  color: white;
-  border-bottom: 2px solid #444;
-}
-
-.menu-item {
-  position: relative;
-  padding: 4px 10px;
-  cursor: pointer;
-}
-
-.submenu {
-  display: none;
-  position: absolute;
-  top: 100%;
-  left: 0;
-  background-color: #333;
-  border: 1px solid #444;
-  padding: 5px 0;
-  min-width: 120px;
-  z-index: 9999;
-}
-
-.submenu-item {
-  padding: 6px 12px;
-  cursor: pointer;
-}
-
-.submenu-item:hover {
-  background-color: #555;
-}
-
-.menu-item:hover .submenu {
-  display: block;
-}
-.code-section {
-  margin-top: 40px;
-  padding: 20px;
-}
-
-.code-section h2 {
-  margin-bottom: 10px;
-  color: white;
-}
-
-
 </style>
+

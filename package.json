@@ -14,14 +14,10 @@
   "license": "MIT",
   "dependencies": {
     "@tauri-apps/api": "^2",
-<<<<<<< HEAD
     "@tauri-apps/plugin-dialog": "^2.4.2",
     "@tauri-apps/plugin-fs": "^2.4.4",
-    "@tauri-apps/plugin-opener": "^2"
-=======
     "@tauri-apps/plugin-opener": "^2",
     "highlight.js": "^11.11.1"
->>>>>>> 76ff4a9 (Add Rust syntax highlighting component)
   },
   "devDependencies": {
     "@sveltejs/adapter-static": "^3.0.6",
