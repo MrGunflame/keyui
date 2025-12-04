@@ -1837,6 +1837,8 @@ dependencies = [
 name = "keyui"
 version = "0.1.0"
 dependencies = [
+ "async-io",
+ "memchr",
  "serde",
  "serde_json",
  "tauri",
@@ -1844,6 +1846,8 @@ dependencies = [
  "tauri-plugin-dialog",
  "tauri-plugin-fs",
  "tauri-plugin-opener",
+ "thiserror 2.0.17",
+ "tokio",
 ]
 
 [[package]]
