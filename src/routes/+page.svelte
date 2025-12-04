@@ -2,6 +2,7 @@
   import Header from './Header.svelte';
   import Api from './Api.svelte';
   import { Client } from './api.ts';
+  import CodeBlock from '$lib/CodeBlock.svelte';
 
   type AppState = {
     client: Client,
@@ -13,6 +14,12 @@
     proofs: [],
   });
 
+  const rustExample = `
+fn main() {
+    println!("Hello from Rust + Tauri!");
+}
+`;
+
 </script>
 
 <main class="container">
@@ -22,7 +29,7 @@
   {#each appState.proofs as proof}
     <span>{proof.proofId}</span>
   {/each}
-  
+
   <h1>Welcome to Tauri + Svelte</h1>
 
   <div class="row">
@@ -36,12 +43,16 @@
       <img src="/svelte.svg" class="logo svelte-kit" alt="SvelteKit Logo" />
     </a>
   </div>
+
   <p>Click on the Tauri, Vite, and SvelteKit logos to learn more.</p>
 
+  <section class="code-section">
+    <h2>Rust example</h2>
+    <CodeBlock language="rust" code={rustExample} />
+  </section>
 </main>
 
 <style>
-
 .logo.vite:hover {
   filter: drop-shadow(0 0 2em #747bff);
 }
@@ -55,20 +66,8 @@
   font-size: 16px;
   line-height: 24px;
   font-weight: 400;
-
-  /* Old light style
-  color: #0f0f0f;
-  background-color: #f6f6f6;
-  */
-  
   color: #f6f6f6;
   background-color: #2f2f2f;
-
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  -webkit-text-size-adjust: 100%;
 }
 
 .container {
@@ -82,7 +81,6 @@
 .logo {
   height: 6em;
   padding: 1.5em;
-  will-change: filter;
   transition: 0.75s;
 }
 
@@ -109,6 +107,16 @@ h1 {
   text-align: center;
 }
 
+.code-section {
+  margin: 2rem auto 0;
+  max-width: 800px;
+  text-align: left;
+}
+
+.code-section h2 {
+  margin-bottom: 0.5rem;
+}
+
 input,
 button {
   border-radius: 8px;
@@ -130,6 +138,7 @@ button {
 button:hover {
   border-color: #396cd8;
 }
+
 button:active {
   border-color: #396cd8;
   background-color: #e8e8e8;
@@ -159,9 +168,10 @@ button {
     color: #ffffff;
     background-color: #0f0f0f98;
   }
+
   button:active {
     background-color: #0f0f0f69;
   }
 }
-
 </style>
+
