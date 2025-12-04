@@ -1,6 +1,9 @@
 <script lang="ts">
     import Menu from './Menu.svelte';
     import FilePicker from './FilePicker.svelte';
+    import { open } from '@tauri-apps/plugin-fs';
+
+    let { appState } = $props();
 
     let file_menu_active = $state(false);
     let big_button = $state(false);
@@ -15,6 +18,23 @@
         file_menu_active = false;
     }
 
+    async function openKeyFile(path: string) {
+        const file = await open(path, {
+            read: true,
+        });
+
+        const stat = await file.stat();
+        const buf = new Uint8Array(stat.size);
+        await file.read(buf);
+
+        const text = new TextDecoder().decode(buf);
+        await file.close();
+
+        const id = await appState.client.loadKey(text);
+        appState.proofs.push(id);
+        const desc = await appState.client.proofTreeRoot(id);
+        console.log(desc.name);
+    }
 </script>
 
 <div class="header">
@@ -25,7 +45,7 @@
             <Menu>
                 <ul class="submenu">
                     <li>
-                        <FilePicker>Open</FilePicker>
+                        <FilePicker action={openKeyFile}>Open</FilePicker>
                     </li>
                 </ul>
             </Menu>

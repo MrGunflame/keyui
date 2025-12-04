@@ -1,7 +1,18 @@
 <script lang="ts">
-  import Header from "./Header.svelte";
-  import { invoke } from "@tauri-apps/api/core";
-  import CodeBlock from "$lib/CodeBlock.svelte";
+  import Header from './Header.svelte';
+  import Api from './Api.svelte';
+  import { Client } from './api.ts';
+  import CodeBlock from '$lib/CodeBlock.svelte';
+
+  type AppState = {
+    client: Client,
+    proofs: ProofId[],
+  };
+
+  let appState: AppState = $state({
+    client: new Client(),
+    proofs: [],
+  });
 
   const rustExample = `
 fn main() {
@@ -9,17 +20,15 @@ fn main() {
 }
 `;
 
-  let name = $state("");
-  let greetMsg = $state("");
-
-  async function greet(event: Event) {
-    event.preventDefault();
-    greetMsg = await invoke("greet", { name });
-  }
 </script>
 
 <main class="container">
-  <Header />
+  <Header {appState} />
+  <Api />
+
+  {#each appState.proofs as proof}
+    <span>{proof.proofId}</span>
+  {/each}
 
   <h1>Welcome to Tauri + Svelte</h1>
 
@@ -41,13 +50,6 @@ fn main() {
     <h2>Rust example</h2>
     <CodeBlock language="rust" code={rustExample} />
   </section>
-
-  <form class="row" on:submit|preventDefault={greet}>
-    <input id="greet-input" placeholder="Enter a name..." bind:value={name} />
-    <button type="submit">Greet</button>
-  </form>
-
-  <p>{greetMsg}</p>
 </main>
 
 <style>
