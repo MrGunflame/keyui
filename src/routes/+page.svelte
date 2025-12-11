@@ -4,17 +4,21 @@
   import { Client } from './api.ts';
   import CodeBlock from '$lib/CodeBlock.svelte';
   import ProofTree from '$lib/components/ProofTree.svelte';
-  import CurrentGoal from '$lib/components/CurrentGoal.svelte';
   import GoalsPanel from '$lib/components/GoalsPanel.svelte';
+  import Sequent from '$lib/panel/Sequent.svelte';
+  import Panel from '$lib/panel/Panel.svelte';
 
   type AppState = {
     client: Client,
-    proofs: ProofId[],
+    // Current proof state (key file state).
+    proof: ProofId | null,
+    // Currently selected node in the proof tree.
+    active_node: NodeId | null,
   };
 
   let appState: AppState = $state({
     client: new Client(),
-    proofs: [],
+    proof: null,
   });
 
   const rustExample = `
@@ -34,9 +38,15 @@ fn main() {
   {/each}
   
   <div class="layout">
+    <Panel>
       <ProofTree />
-      <CurrentGoal />
+    </Panel>
+    <Panel>
+      <Sequent appState={appState} />
+    </Panel>
+    <Panel>
       <GoalsPanel />
+    </Panel>
   </div>
   
   <section class="code-section">
