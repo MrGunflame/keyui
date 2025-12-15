@@ -4,8 +4,6 @@
     let sequent = $state("<no sequent loaded>");
 
     async function fetchSequent(client, proof, node) {
-        let root = await client.proofTreeRoot(proof);
-
         const options = {
             unicode: false,
             width: 120,
