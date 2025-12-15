@@ -5,13 +5,6 @@
 </script>
 
 <style>
-    .tree {
-        background: #252525;
-        padding: 10px;
-        border-radius: 6px;
-        height: 100%;
-        overflow-y: auto;
-    }
     .node {
         padding: 6px;
         margin: 4px 0;
@@ -25,7 +18,7 @@
     }
 </style>
 
-<div class="tree">
+<div>
     <h3>Proof Tree</h3>
     {#each proofNodes as n}
         <div class="node {n.status}">

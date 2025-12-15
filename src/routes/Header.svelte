@@ -31,9 +31,9 @@
         await file.close();
 
         const id = await appState.client.loadKey(text);
-        appState.proofs.push(id);
-        const desc = await appState.client.proofTreeRoot(id);
-        console.log(desc.name);
+        appState.proof = id;
+        const root = await appState.client.proofTreeRoot(id);
+        appState.active_node = root.id;
     }
 </script>
 

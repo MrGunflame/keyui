@@ -21,6 +21,10 @@ export class Client {
     public async proofTreeRoot(proof: ProofId): Promise<TreeNodeDesc> {
         return await this.send("proofTree/root", proof);
     }
+
+    public async goalPrint(id: NodeId, options: PrintOptions): Promise<NodeTextDesc> {
+        return await this.send("goal/print", [id, options]);
+    }
 }
 
 export type ProofId = {
@@ -40,4 +44,22 @@ export type NodeId = {
 export type TreeNodeDesc = {
     id: NodeId;
     name: string;
+};
+
+export type PrintOptions = {
+    unicode: boolean,
+    width: number,
+    indentation: number,
+    pure: boolean,
+    termLabels: boolean,
+};
+
+export type NodeTextDesc = {
+    id: NodeTextId,
+    result: string,
+};
+
+export type NodeTextId = {
+    nodeId: NodeId,
+    nodeTextId: number,
 };
