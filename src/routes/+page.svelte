@@ -7,6 +7,7 @@
   import GoalsPanel from '$lib/components/GoalsPanel.svelte';
   import Sequent from '$lib/panel/Sequent.svelte';
   import Panel from '$lib/panel/Panel.svelte';
+  import Modal from './Modal.svelte';
 
   type AppState = {
     client: Client,
@@ -40,7 +41,7 @@ fn main() {
    {#if errorState}
     <Modal open={true} on:close={() => (errorState = null)}>
       <h2>Error</h2>
-      <p>"An error has occured"</p>
+      <p>{errorState}</p>
     </Modal>
   {/if}
 
