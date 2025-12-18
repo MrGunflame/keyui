@@ -40,11 +40,11 @@ fn main() {
    {#if errorState}
     <Modal open={true} on:close={() => (errorState = null)}>
       <h2>Error</h2>
-      <p>{errorState}</p>
+      <pre>
+        <code>{errorState}</code>
+      </pre>
     </Modal>
   {/if}
-
-
   
   <div class="layout">
     <Panel>

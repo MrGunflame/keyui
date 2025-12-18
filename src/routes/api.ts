@@ -14,6 +14,7 @@ export class Client {
             err.code = resp.error.code;
             err.data = resp.error.data;
             err.message = resp.error.message;
+            err.method = method;
             throw err;
         }
 
@@ -55,9 +56,10 @@ class ApiError {
     code: number = 0;
     data: string = "";
     message: string = "";
+    method: string = "";
 
     public toString(): string {
-        return `${this.message} (Code ${this.code}):\n${this.data}`;
+        return `${this.message} (Code ${this.code}) while calling ${this.method}:\n${this.data}`;
     }
 }
 
