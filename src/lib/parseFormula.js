@@ -56,8 +56,8 @@ function parseTerm(input, i) {
 function parseImplication(input, i = 0) {
     let [left, j] = parseTerm(input, i);
 
-    while (input.slice(j, j + 2) === "->") {
-        let [right, k] = parseTerm(input, j + 2);
+    if (input.slice(j, j + 2) === "->") {
+        let [right, k] = parseImplication(input, j + 2);
         left = { op: "->", args: [left, right] };
         j = k;
     }
