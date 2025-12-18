@@ -3,7 +3,7 @@
     import FilePicker from './FilePicker.svelte';
     import { open } from '@tauri-apps/plugin-fs';
 
-    let { appState } = $props();
+    let { appState, onError } = $props();
 
     let file_menu_active = $state(false);
     let big_button = $state(false);
@@ -31,9 +31,15 @@
         await file.close();
 
         const id = await appState.client.loadKey(text);
-        appState.proofs.push(id);
-        const desc = await appState.client.proofTreeRoot(id);
-        console.log(desc.name);
+        appState.proof = id;
+        const root = await appState.client.proofTreeRoot(id);
+        appState.active_node = root.id;
+    }
+
+    function tryOpenKeyFile(path: string) {
+        openKeyFile(path).catch(err => {
+            onError(err.toString());
+        });
     }
 </script>
 
@@ -45,7 +51,7 @@
             <Menu>
                 <ul class="submenu">
                     <li>
-                        <FilePicker action={openKeyFile}>Open</FilePicker>
+                        <FilePicker action={tryOpenKeyFile}>Open</FilePicker>
                     </li>
                 </ul>
             </Menu>

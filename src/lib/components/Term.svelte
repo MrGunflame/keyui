@@ -17,23 +17,35 @@
 
 
 <span onclick={handleClick} style="cursor: pointer; padding: 2px;">
-
     {#if typeof term === "string"}
         {term}
     {:else}
-        <!-- operator -->
-        <span>{term.op}</span>
+        <!-- Binop -->
         (
-
-        {#each term.args as arg, i}
-            <term
-                term={arg}
-                path={[...path, i]}
+        {#if term.args.length > 1}
+            <svelte:self
+                term={term.args[0]}
+                path={[...path, 0]}
                 onSelect={onSelect}
             />
-            {#if i < term.args.length - 1}, {/if}
-        {/each}
 
+            <span>{term.op}</span>
+
+            <svelte:self
+                term={term.args[1]}
+                path={[...path, 1]}
+                onSelect={onSelect}
+            />
+        <!-- Unop -->
+        {:else}
+            <span>{term.op}</span>
+
+            <svelte:self
+                term={term.args[0]}
+                path={[...path, 0]}
+                onSelect={onSelect}
+            />
+        {/if}
         )
     {/if}
 </span>

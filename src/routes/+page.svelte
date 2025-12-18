@@ -4,23 +4,27 @@
   import { Client } from './api';
   import CodeBlock from '$lib/CodeBlock.svelte';
   import ProofTree from '$lib/components/ProofTree.svelte';
-  import CurrentGoal from '$lib/components/CurrentGoal.svelte';
   import GoalsPanel from '$lib/components/GoalsPanel.svelte';
-  import TermTree from '$lib/components/TermTree.svelte';
-
-  type ProofId = {
-    proofId: string;
-  };
+  import Sequent from '$lib/panel/Sequent.svelte';
+  import Panel from '$lib/panel/Panel.svelte';
+  import type { ProofId, NodeId } from './api';
+  import Modal from './Modal.svelte';
 
   type AppState = {
     client: Client,
-    proofs: ProofId[],
+    // Current proof state (key file state).
+    proof: ProofId | null,
+    // Currently selected node in the proof tree.
+    active_node: NodeId | null,
   };
 
   let appState: AppState = $state({
     client: new Client(),
-    proofs: [],
+    proof: null,
+    active_node:null,
   });
+
+  let errorState: string | null = $state(null);
 
   const rustExample = `
 fn main() {
@@ -31,20 +35,28 @@ fn main() {
 </script>
 
 <main class="container">
-  <Header {appState} />
+  <Header {appState} onError={(error) => (errorState = error)} />
   <!-- <Api /> -->
-
-  {#each appState.proofs as proof}
-    <span>{proof.proofId}</span>
-  {/each}
+   {#if errorState}
+    <Modal open={true} on:close={() => (errorState = null)}>
+      <h2>Error</h2>
+      <pre>
+        <code>{errorState}</code>
+      </pre>
+    </Modal>
+  {/if}
   
- <div class="layout">
-    <ProofTree />
-    <CurrentGoal />
-    <TermTree />    
-    <GoalsPanel />
-</div>
-
+  <div class="layout">
+    <Panel>
+      <ProofTree {appState} />
+    </Panel>
+    <Panel>
+      <Sequent {appState} />
+    </Panel>
+    <Panel>
+      <GoalsPanel {appState} />
+    </Panel>
+  </div>
   
   <section class="code-section">
     <h2>Rust example</h2>
@@ -57,6 +69,9 @@ fn main() {
     display: grid;
     grid-template-columns: 250px 1fr 250px;
     gap: 10px;
-    min-height: calc(100vh - 60px); /* subtract header height */
-}
+    height: 100vh;
+    padding: 10px;
+    background: #1e1e1e;
+    color: white;
+  }
 </style>

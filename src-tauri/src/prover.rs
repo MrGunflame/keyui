@@ -1,5 +1,6 @@
 use std::io::{self, PipeReader, PipeWriter, Read, Write};
 use std::net::TcpStream;
+use std::path::PathBuf;
 use std::process::Command;
 use std::str::FromStr;
 use std::sync::{LazyLock, OnceLock};
@@ -10,11 +11,11 @@ use serde_json::Value;
 use thiserror::Error;
 use tokio::sync::{mpsc, oneshot};
 
-static CHANNEL: OnceLock<(mpsc::UnboundedSender<(String, Value, oneshot::Sender<Value>)>)> =
+static CHANNEL: OnceLock<(mpsc::UnboundedSender<(String, Value, oneshot::Sender<Message>)>)> =
     OnceLock::new();
 
 #[tauri::command]
-pub async fn send_msg(method: String, params: Value) -> Value {
+pub async fn send_msg(method: String, params: Value) -> Message {
     let tx = CHANNEL.get().unwrap();
 
     let (resp_tx, resp_rx) = oneshot::channel();
@@ -61,7 +62,7 @@ pub fn start_prover() {
 
     let mut conn = Connection::new(stdin_tx, stdout_rx);
 
-    let (tx, mut rx) = mpsc::unbounded_channel::<(String, Value, oneshot::Sender<Value>)>();
+    let (tx, mut rx) = mpsc::unbounded_channel::<(String, Value, oneshot::Sender<Message>)>();
     CHANNEL.set(tx).unwrap();
 
     std::thread::spawn(move || {
@@ -105,12 +106,16 @@ impl Connection {
 
         let buf = serde_json::to_string(&req).unwrap();
 
+        dbg!("TX", serde_json::from_str::<Value>(&buf).unwrap());
+
         let framed = format!("Content-Length: {}\r\n\r\n{}", buf.len(), buf);
+        dbg!(&framed);
+
         self.tx.write_all(framed.as_bytes())?;
         Ok(())
     }
 
-    pub fn recv(&mut self) -> Result<Value, ReadError> {
+    pub fn recv(&mut self) -> Result<Message, ReadError> {
         loop {
             if self.buf.len() - self.bytes_init < 256 {
                 self.buf.resize(self.buf.len() * 2, 0);
@@ -138,9 +143,28 @@ impl Connection {
             self.buf.copy_within(bytes_consumed.., 0);
             self.bytes_init -= bytes_consumed;
 
-            return Ok(resp.result.unwrap_or(Value::Null));
+            let mut msg = Message::Null(Value::Null);
+            if let Some(result) = resp.result {
+                msg = Message::Result(result);
+            }
+
+            if let Some(err) = resp.error {
+                msg = Message::Err(err);
+            }
+
+            return Ok(msg);
         }
     }
+}
+
+#[derive(Clone, Debug, Serialize)]
+pub enum Message {
+    #[serde(rename = "result")]
+    Result(Value),
+    #[serde(rename = "error")]
+    Err(Value),
+    #[serde(untagged)]
+    Null(Value),
 }
 
 #[derive(Clone, Debug, Serialize)]

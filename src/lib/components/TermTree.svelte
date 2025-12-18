@@ -2,14 +2,19 @@
     import Term from "./Term.svelte";
     import { parseFormula } from "$lib/parseFormula.js";
 
-    export let sequent: string = "==> (p -> q) -> !q -> !p";
+    let { sequent } = $props();
 
     // FIXED extraction
     let parts = sequent.split("==>");
     let formula = parts.length > 1 ? parts[1].trim() : sequent.trim();
     console.log("TERM TREE FORMULA:", formula);
 
-    let termTree = parseFormula(formula);
+    let termTree = null;
+    try {
+        termTree = parseFormula(formula);
+    } catch (e) {
+        console.error(e);
+    }
 
     let selectedPath: number[] | null = null;
 
@@ -19,18 +24,18 @@
     }
 </script>
 
-
-
-
 <div class="tree">
-    <h3>Term Tree</h3>
+    {#if termTree}
+        <Term term={termTree} path={[]} onSelect={handleSelect} />
 
-    <Term term={termTree} path={[]} onSelect={handleSelect} />
-
-    {#if selectedPath}
+        {#if selectedPath}
         <div class="display">
             Selected path: [{selectedPath.join(", ")}]
         </div>
+        {/if}
+    <!-- Display raw sequent as fallback if parsing fails -->
+    {:else}
+        <span>{sequent}</span>
     {/if}
 </div>
 
