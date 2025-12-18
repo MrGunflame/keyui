@@ -24,11 +24,6 @@
     proof: null,
     active_node:null,
   });
-  console.log("Client instance:", appState.client);
-  console.log("Client prototype methods:", Object.getOwnPropertyNames(Object.getPrototypeOf(appState.client)));
-  console.log("Has proofGoals?", typeof (appState.client as any).proofGoals);
-
-
 
   const rustExample = `
 fn main() {

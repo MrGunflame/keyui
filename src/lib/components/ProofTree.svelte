@@ -12,7 +12,12 @@
     { label: "4: OPEN GOAL", status: "open", indent: 3, sequent: "q ⊢ p" },
   ];
 
-  let realNodes = $state<TreeNodeDesc[]>([]);
+  type Node = {
+    node: TreeNodeDesc;
+    depth: number;
+  };
+
+  let nodes = $state<TreeNodeDesc[]>([]);
   let loading = $state(false);
   let error = $state<string | null>(null);
 
@@ -22,77 +27,89 @@
     if (up.includes("CLOSED")) return "closed";
     return "unknown";
   }
-  function isActive(n: TreeNodeDesc) {
-  return appState.active_node?.nodeId === n.id.nodeId;
-}
 
-  async function loadReal() {
-    error = null;
-    realNodes = [];
+  function isActive(node: TreeNodeDesc) {
+    return appState.active_node?.nodeId == node.id.nodeId;
+  }
 
-    if (!appState.proof) return;
+  async function loadTree(client, proof) {
+    let nodes = [];
+    let stack = [];
 
-    loading = true;
-    try {
-      const root = await appState.client.proofTreeRoot(appState.proof);
-      realNodes = [root];
-      appState.active_node = root.id; // select root so Sequent panel updates
-    } catch (e) {
-      error = String(e);
-    } finally {
-      loading = false;
+    let root = await client.proofTreeRoot(proof);
+    nodes.push({ node: root, depth: 0 });
+    stack.push({ id: root.id, depth: 0 });
+
+    while (stack.length != 0) {
+      let { id, depth } = stack.pop();
+      let elems = await client.proofTreeChildren(proof, id);
+
+      for (const elem of elems) {
+        nodes.push({ node: elem, depth: depth + 1 });
+        stack.push({ id: elem.id, depth: depth + 1 });
+      }
     }
+
+    return nodes;
   }
 
   $effect(() => {
-    void loadReal();
+    if (appState.proof == null) {
+      return;
+    }
+
+    loadTree(appState.client, appState.proof).then(n => {
+      nodes = n;
+    });
   });
 </script>
 
 <div>
   <h3>Proof Tree</h3>
+  <ul class="node-list">
+    {#each nodes as node, index}
 
-  {#if !appState.proof}
-    {#each demoNodes as n}
-      <div class="node {n.status}" style="margin-left:{n.indent * 14}px">
-        <div class="title">{n.label}</div>
-      </div>
+    <!-- Close current subtree if depth decreased -->
+
+    <li style="margin-left: {node.depth * 10}px;">
+      <button
+        class="node {statusFromName(node.node.name)} { isActive(node.node) ? "active" : ""}"
+        onclick={() => (appState.active_node = node.node.id)}
+      >
+        {node.node.id.nodeId}: {node.node.name}
+      </button>
+    </li>
+
     {/each}
-  {:else}
-    {#if loading}
-      <p style="opacity:0.7;">Loading proof tree…</p>
-    {:else if error}
-      <p style="color:#ff6b6b;">Error: {error}</p>
-    {:else if realNodes.length === 0}
-      <p style="opacity:0.7;">No nodes returned.</p>
-    {:else}
-      {#each realNodes as n}
-        <div
-          class="node {statusFromName(n.name)} {isActive(n)?'active' : ''}"
-          onclick={() => (appState.active_node = n.id)}
-        >
-          <div class="title">{n.id.nodeId}:{n.name}</div>
-        </div>
-      {/each}
-    {/if}
-  {/if}
+  </ul>
 </div>
 
 <style>
-  .node { padding: 8px; margin: 6px 0; border-radius: 6px; background: #2b2b2b; cursor: pointer; }
+  .node-list {
+    height: 100%;
+    overflow-y: auto;
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+
+  .node {
+    display: block;
+    color: white;
+    background: transparent;
+    border: 0;
+    padding: 8px;
+    margin: 6px 0;
+    border-radius: 6px;
+    background: #2b2b2b;
+    font-weight: 600;
+  }
+
+  .active {
+    border: 2px solid green;
+  }
+
   .open { background: #662222; }
   .closed { background: #225522; }
   .unknown { background: #333; }
-  .title { font-weight: 600; }
-  .active { outline: 2px solid #ffffff33; }
 </style>
-
-
-
-
-
-
-
-
-
-
