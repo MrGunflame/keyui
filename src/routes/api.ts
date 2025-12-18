@@ -25,6 +25,12 @@ export class Client {
     public async goalPrint(id: NodeId, options: PrintOptions): Promise<NodeTextDesc> {
         return await this.send("goal/print", [id, options]);
     }
+    public async proofTreeChildren(proof: ProofId, nodeId: TreeNodeId): Promise<TreeNodeDesc[]>{
+        return await this.send("proofTree/children", [proof,nodeId]);
+    }
+    public async proofTreeSubtree(proof:ProofId, nodeId: TreeNodeId): Promise<TreeNodeDesc[]>{
+        return await this.send("proofTree/subtree",[proof,nodeId]);
+    }
 }
 
 export type ProofId = {
@@ -37,7 +43,7 @@ export type EnvId = {
 };
 
 export type NodeId = {
-    nodeId: number;
+    nodeId: string;
     proofId: ProofId;
 };
 
@@ -62,4 +68,7 @@ export type NodeTextDesc = {
 export type NodeTextId = {
     nodeId: NodeId,
     nodeTextId: number,
+};
+export type TreeNodeId ={
+    id: string;
 };

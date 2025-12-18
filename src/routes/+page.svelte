@@ -1,12 +1,15 @@
 <script lang="ts">
   import Header from './Header.svelte';
   import Api from './Api.svelte';
-  import { Client } from './api.ts';
+  import { Client } from './api';
   import CodeBlock from '$lib/CodeBlock.svelte';
   import ProofTree from '$lib/components/ProofTree.svelte';
   import GoalsPanel from '$lib/components/GoalsPanel.svelte';
   import Sequent from '$lib/panel/Sequent.svelte';
   import Panel from '$lib/panel/Panel.svelte';
+  import type{ProofId,NodeId} from './api';
+
+  type ProofInfo= {proofId: string};
 
   type AppState = {
     client: Client,
@@ -19,7 +22,13 @@
   let appState: AppState = $state({
     client: new Client(),
     proof: null,
+    active_node:null,
   });
+  console.log("Client instance:", appState.client);
+  console.log("Client prototype methods:", Object.getOwnPropertyNames(Object.getPrototypeOf(appState.client)));
+  console.log("Has proofGoals?", typeof (appState.client as any).proofGoals);
+
+
 
   const rustExample = `
 fn main() {
@@ -33,19 +42,17 @@ fn main() {
   <Header {appState} />
   <!-- <Api /> -->
 
-  {#each appState.proofs as proof}
-    <span>{proof.proofId}</span>
-  {/each}
+
   
   <div class="layout">
     <Panel>
-      <ProofTree />
+      <ProofTree appState= {appState} />
     </Panel>
     <Panel>
       <Sequent appState={appState} />
     </Panel>
     <Panel>
-      <GoalsPanel />
+      <GoalsPanel appState={appState} />
     </Panel>
   </div>
   
