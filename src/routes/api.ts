@@ -7,7 +7,17 @@ export class Client {
             "params": payload,
         });
 
-        return resp;
+        console.log(resp);
+
+        if (resp.error) {
+            let err = new ApiError();
+            err.code = resp.error.code;
+            err.data = resp.error.data;
+            err.message = resp.error.message;
+            throw err;
+        }
+
+        return resp.result;
     }
 
     public async version(): Promise<string> {
@@ -24,6 +34,16 @@ export class Client {
 
     public async goalPrint(id: NodeId, options: PrintOptions): Promise<NodeTextDesc> {
         return await this.send("goal/print", [id, options]);
+    }
+}
+
+class ApiError {
+    code: number = 0;
+    data: string = "";
+    message: string = "";
+
+    public toString(): string {
+        return `${this.message} (Code ${this.code}):\n${this.data}`;
     }
 }
 

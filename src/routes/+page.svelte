@@ -7,6 +7,7 @@
   import GoalsPanel from '$lib/components/GoalsPanel.svelte';
   import Sequent from '$lib/panel/Sequent.svelte';
   import Panel from '$lib/panel/Panel.svelte';
+  import Modal from './Modal.svelte';
 
   type AppState = {
     client: Client,
@@ -21,6 +22,11 @@
     proof: null,
   });
 
+  type ErrorState ={
+    message: string,
+  }
+  let errorState: string | null = $state(null);
+
   const rustExample = `
 fn main() {
     println!("Hello from Rust + Tauri!");
@@ -30,8 +36,14 @@ fn main() {
 </script>
 
 <main class="container">
-  <Header {appState} />
+  <Header {appState} onError={(error) => (errorState = error)} />
   <!-- <Api /> -->
+   {#if errorState}
+    <Modal open={true} on:close={() => (errorState = null)}>
+      <h2>Error</h2>
+      <p>{errorState}</p>
+    </Modal>
+  {/if}
 
   {#each appState.proofs as proof}
     <span>{proof.proofId}</span>
