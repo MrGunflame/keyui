@@ -7,7 +7,17 @@ export class Client {
             "params": payload,
         });
 
-        return resp;
+        console.log(resp);
+
+        if (resp.error) {
+            let err = new ApiError();
+            err.code = resp.error.code;
+            err.data = resp.error.data;
+            err.message = resp.error.message;
+            throw err;
+        }
+
+        return resp.result;
     }
 
     public async version(): Promise<string> {
@@ -38,6 +48,16 @@ export class Client {
 
     public async proofGoals(proof: ProofId, onlyOpened: boolean, onlyEnabled: boolean): Promise<NodeDesc> {
         return await this.send("proof/goals", [proof, onlyOpened, onlyEnabled]);
+    }
+}
+
+class ApiError {
+    code: number = 0;
+    data: string = "";
+    message: string = "";
+
+    public toString(): string {
+        return `${this.message} (Code ${this.code}):\n${this.data}`;
     }
 }
 
