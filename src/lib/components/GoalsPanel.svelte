@@ -1,5 +1,5 @@
 <script>
-    export let openGoals = 1;
+    export let openGoals = 4;
 </script>
 
 <style>
@@ -7,7 +7,7 @@
         background: #252525;
         padding: 10px;
         border-radius: 6px;
-        height: 100%;
+        height: 50%;
     }
 </style>
 
