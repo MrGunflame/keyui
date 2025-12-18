@@ -3,23 +3,12 @@
 
   let { appState } = $props();
 
-  // Demo nodes
-  const demoNodes = [
-    { label: "0: OPEN GOAL", status: "open", indent: 0, sequent: "⊢ (p → q) → q → p" },
-    { label: "1: apply rule: impRight", status: "open", indent: 1, sequent: "p → q, q ⊢ p" },
-    { label: "2: split", status: "open", indent: 2, sequent: null },
-    { label: "3: CLOSED", status: "closed", indent: 3, sequent: "⊢ ⊤" },
-    { label: "4: OPEN GOAL", status: "open", indent: 3, sequent: "q ⊢ p" },
-  ];
-
   type Node = {
     node: TreeNodeDesc;
     depth: number;
   };
 
-  let nodes = $state<TreeNodeDesc[]>([]);
-  let loading = $state(false);
-  let error = $state<string | null>(null);
+  let nodes = $state<Node[]>([]);
 
   function statusFromName(name: string) {
     const up = name.toUpperCase();

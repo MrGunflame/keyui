@@ -7,7 +7,7 @@
   import GoalsPanel from '$lib/components/GoalsPanel.svelte';
   import Sequent from '$lib/panel/Sequent.svelte';
   import Panel from '$lib/panel/Panel.svelte';
-  import type{ProofId,NodeId} from './api';
+  import type { ProofId, NodeId } from './api';
   import Modal from './Modal.svelte';
 
   type AppState = {
@@ -24,9 +24,6 @@
     active_node:null,
   });
 
-  type ErrorState ={
-    message: string,
-  }
   let errorState: string | null = $state(null);
 
   const rustExample = `
@@ -51,13 +48,13 @@ fn main() {
   
   <div class="layout">
     <Panel>
-      <ProofTree appState= {appState} />
+      <ProofTree {appState} />
     </Panel>
     <Panel>
-      <Sequent appState={appState} />
+      <Sequent {appState} />
     </Panel>
     <Panel>
-      <GoalsPanel appState={appState} />
+      <GoalsPanel {appState} />
     </Panel>
   </div>
   
