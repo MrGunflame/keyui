@@ -1,12 +1,13 @@
 <script lang="ts">
   import Header from './Header.svelte';
   import Api from './Api.svelte';
-  import { Client } from './api.ts';
+  import { Client } from './api';
   import CodeBlock from '$lib/CodeBlock.svelte';
   import ProofTree from '$lib/components/ProofTree.svelte';
   import GoalsPanel from '$lib/components/GoalsPanel.svelte';
   import Sequent from '$lib/panel/Sequent.svelte';
   import Panel from '$lib/panel/Panel.svelte';
+  import type { ProofId, NodeId } from './api';
   import Modal from './Modal.svelte';
 
   type AppState = {
@@ -20,11 +21,9 @@
   let appState: AppState = $state({
     client: new Client(),
     proof: null,
+    active_node:null,
   });
 
-  type ErrorState ={
-    message: string,
-  }
   let errorState: string | null = $state(null);
 
   const rustExample = `
@@ -45,19 +44,17 @@ fn main() {
     </Modal>
   {/if}
 
-  {#each appState.proofs as proof}
-    <span>{proof.proofId}</span>
-  {/each}
+
   
   <div class="layout">
     <Panel>
-      <ProofTree />
+      <ProofTree {appState} />
     </Panel>
     <Panel>
-      <Sequent appState={appState} />
+      <Sequent {appState} />
     </Panel>
     <Panel>
-      <GoalsPanel />
+      <GoalsPanel {appState} />
     </Panel>
   </div>
   

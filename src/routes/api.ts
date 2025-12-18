@@ -32,8 +32,22 @@ export class Client {
         return await this.send("proofTree/root", proof);
     }
 
+    public async proofTreeChildren(proof: ProofId, nodeId: NodeId): Promise<TreeNodeDesc[]> {
+        // FIXME: What?
+        let tree_node = {
+            "id": nodeId.nodeId,
+            "$class": "org.keyproject.key.api.data.KeyIdentifications$TreeNodeId",
+        };
+
+        return await this.send("proofTree/children", [proof, tree_node]);
+    }
+
     public async goalPrint(id: NodeId, options: PrintOptions): Promise<NodeTextDesc> {
         return await this.send("goal/print", [id, options]);
+    }
+
+    public async proofGoals(proof: ProofId, onlyOpened: boolean, onlyEnabled: boolean): Promise<NodeDesc> {
+        return await this.send("proof/goals", [proof, onlyOpened, onlyEnabled]);
     }
 }
 
@@ -57,7 +71,7 @@ export type EnvId = {
 };
 
 export type NodeId = {
-    nodeId: number;
+    nodeId: string;
     proofId: ProofId;
 };
 
@@ -82,4 +96,16 @@ export type NodeTextDesc = {
 export type NodeTextId = {
     nodeId: NodeId,
     nodeTextId: number,
+};
+
+export type TreeNodeId = {
+    id: string;
+};
+
+export type NodeDesc = {
+    nodeId: NodeId;
+    branchLabel: string;
+    scriptRuleApplication: boolean;
+    children: NodeDesc[];
+    description: string;
 };
