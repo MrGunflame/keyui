@@ -1,7 +1,9 @@
 <script lang="ts">
+    import TermTree from '$lib/components/TermTree.svelte';
+    
     let { appState } = $props();
     
-    let sequent = $state("<no sequent loaded>");
+    let sequent = $state(null);
 
     async function fetchSequent(client, proof, node) {
         const options = {
@@ -31,7 +33,11 @@
     <h3>Sequent</h3>
     <pre>
         <code>
-            {sequent}
+            {#if sequent}
+                <TermTree {sequent} />
+            {:else}
+                <span>{"<no sequent loaded>"}</span>
+            {/if}
         </code>
     </pre>
 </div>
