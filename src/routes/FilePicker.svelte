@@ -9,8 +9,8 @@
             directory: false,
             filters: [
                 {
-                    name: ".key, .proof, .rs, Cargo.toml",
-                    extensions: ["key", "proof", "rs", "Cargo.toml"],
+                    name: "Rust",
+                    extensions: ["rs"],
                 },
                 // This filter allows any file with any extension to
                 // be selected.

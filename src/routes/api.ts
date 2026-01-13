@@ -34,7 +34,6 @@ export class Client {
     }
 
     public async proofTreeChildren(proof: ProofId, nodeId: NodeId): Promise<TreeNodeDesc[]> {
-        // FIXME: What?
         let tree_node = {
             "id": nodeId.nodeId,
             "$class": "org.keyproject.key.api.data.KeyIdentifications$TreeNodeId",

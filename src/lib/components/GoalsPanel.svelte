@@ -1,11 +1,13 @@
 <script lang="ts">
   import type { NodeDesc } from "../../routes/api";
 
-  let { appState } = $props();
+  //let { appState } = $props();
+  let prop = $props();
+  let appState = prop.appState;
 
-  let goals = $state<[]>([]);
-
-  async function loadOpenGoals(client, proof) {
+  let goals = $state<NodeDesc[]>([]);
+ 
+  async function loadOpenGoals(client:any, proof:any) {
     const goals = await client.proofGoals(proof, true, true);
     return goals;
   }
