@@ -117,7 +117,14 @@ export type PrintOptions = {
 export type NodeTextDesc = {
     id: NodeTextId,
     result: string,
+    terms: NodeTextSpan[];
 };
+
+export type NodeTextSpan = {
+    start: number;
+    end: number;
+    children: NodeTextSpan[];
+}
 
 export type NodeTextId = {
     nodeId: NodeId,
