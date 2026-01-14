@@ -19,18 +19,10 @@
     }
 
     async function openKeyFile(path: string) {
-        const file = await open(path, {
-            read: true,
+        const id = await appState.client.load({
+            problemFile: path,
         });
 
-        const stat = await file.stat();
-        const buf = new Uint8Array(stat.size);
-        await file.read(buf);
-
-        const text = new TextDecoder().decode(buf);
-        await file.close();
-
-        const id = await appState.client.loadKey(text);
         appState.proof = id;
         const root = await appState.client.proofTreeRoot(id);
         appState.active_node = root.id;
