@@ -29,8 +29,7 @@
   }
 
   // DEV ONLY: show a small fake tree when no proof is loaded (so we can work on UI)
-  // Set to false before final PR if your team prefers no demo data.
-  const DEMO_TREE = true;
+  const DEMO_TREE = false;
 
   function makeDemoNodes(): Node[] {
     const fake = (nodeId: number, name: string) =>
