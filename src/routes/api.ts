@@ -25,6 +25,30 @@ export class Client {
         return await this.send("meta/version", null);
     }
 
+
+    public async load(params: LoadParams): Promise<ProofId> {
+        let framed: any = {
+            "problemFile": {
+                "uri": params.problemFile,
+            },
+            "$class": "org.keyproject.key.api.data.LoadParams",
+        };
+
+        if (params.bootClassPath) {
+            framed.bootClassPath = { "uri": params.bootClassPath };
+        }
+
+        if (params.classPath) {
+            framed.classPath = params.classPath.map((x) => ({ "uri": x }));
+        }
+
+        if (params.includes) {
+            framed.includes = params.includes.map((x) => ({ "uri": x }));
+        }
+
+        return await this.send("loading/load", framed);
+    }
+
     public async loadKey(content: string): Promise<ProofId> {
         return await this.send("loading/loadKey", content);
     }
@@ -93,7 +117,14 @@ export type PrintOptions = {
 export type NodeTextDesc = {
     id: NodeTextId,
     result: string,
+    terms: NodeTextSpan[];
 };
+
+export type NodeTextSpan = {
+    start: number;
+    end: number;
+    children: NodeTextSpan[];
+}
 
 export type NodeTextId = {
     nodeId: NodeId,

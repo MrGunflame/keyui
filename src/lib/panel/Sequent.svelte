@@ -15,7 +15,7 @@
         };
 
         const seq = await client.goalPrint(node, options);
-        return seq.result;
+        return seq;
     }
 
     $effect(() => {
@@ -31,19 +31,11 @@
 
 <div>
     <h3>Sequent</h3>
-    <pre>
-        <code>
-            {#if sequent}
-                <TermTree {sequent} />
-            {:else}
-                <span>{"<no sequent loaded>"}</span>
-            {/if}
-        </code>
-    </pre>
+    <!-- NOTE: That all of this is on a single line is deliberate: the pre element is whitespace/tab sensitive. -->
+    <pre><code>{#if sequent}{#key sequent}<TermTree {sequent} /> {/key}{:else}<span>{"<no sequent loaded>"}</span> {/if}</code></pre>
 </div>
 
 <style>
     pre {
-        white-space: pre-line;
     }
 </style>
