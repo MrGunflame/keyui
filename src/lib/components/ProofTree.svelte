@@ -9,6 +9,34 @@
   };
 
   let nodes = $state<Node[]>([]);
+  
+  type CtxMenuState = {
+    open: boolean;
+    x: number;
+    y: number;
+    node: TreeNodeDesc | null;
+  };
+
+  let ctxMenu = $state<CtxMenuState>({
+    open: false,
+    x: 0,
+    y: 0,
+    node: null,
+  });
+
+  function openCtxMenu(e: MouseEvent, node: TreeNodeDesc) {
+    e.preventDefault();
+    ctxMenu = {
+      open: true,
+      x: e.clientX,
+      y: e.clientY,
+      node,
+    };
+  }
+
+  function closeCtxMenu() {
+    ctxMenu.open = false;
+  }
 
   function statusFromName(name: string) {
     const up = name.toUpperCase();
@@ -45,16 +73,17 @@
     ];
   }
 
-  async function loadTree(client, proof) {
+  async function loadTree(client:any , proof:any) {
     let nodes = [];
-    let stack = [];
+    let stack: { id: any; depth: number }[] = [];
+
 
     let root = await client.proofTreeRoot(proof);
     nodes.push({ node: root, depth: 0 });
     stack.push({ id: root.id, depth: 0 });
 
     while (stack.length != 0) {
-      let { id, depth } = stack.pop();
+      let { id, depth } = stack.pop()!;
       let elems = await client.proofTreeChildren(proof, id);
 
       for (const elem of elems) {
@@ -93,12 +122,26 @@
         <button
           class="node {statusFromName(node.node.name)} {isActive(node.node) ? "active" : ""} {isLeaf(index) ? "leaf" : "internal"}"
           onclick={() => (appState.active_node = node.node.id)}
+        oncontextmenu={(e)=>openCtxMenu(e,node.node)}
         >
           {node.node.id.nodeId}: {node.node.name}
         </button>
       </li>
     {/each}
   </ul>
+  {#if ctxMenu.open}
+    <div class="ctx-backdrop" onclick={closeCtxMenu}>
+      <div
+        class="ctx-menu"
+        onclick={(e) => e.stopPropagation()}
+      >
+        <div class="ctx-title">Node {ctxMenu.node?.id.nodeId}</div>
+        <button class="ctx-item" disabled>Action A</button>
+        <button class="ctx-item" disabled> Action B</button>
+        <button class="ctx-item" disabled> Action C</button>
+      </div>
+    </div>
+  {/if}
 </div>
 
 <style>
@@ -127,6 +170,51 @@
 
   .node:hover {
     border-color: rgba(255, 255, 255, 0.22);
+  }
+
+  .open { background: #662222; }
+  .closed { background: #225522; }
+  .unknown { background: #333; }
+  
+  .ctx-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 999;
+  }
+
+  .ctx-menu {
+    position: fixed;
+    z-index: 1000;
+    min-width: 220px;
+    background: #1f1f1f;
+    border: 1px solid #444;
+    border-radius: 8px;
+    padding: 8px;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.4);
+  }
+
+  .ctx-title {
+    font-size: 12px;
+    opacity: 0.8;
+    padding: 6px 8px;
+    border-bottom: 1px solid #333;
+    margin-bottom: 6px;
+  }
+
+  .ctx-item {
+    width: 100%;
+    text-align: left;
+    padding: 8px;
+    border: 0;
+    background: transparent;
+    color: white;
+    cursor: not-allowed;
+    border-radius: 6px;
+    opacity: 0.7;
+  }
+
+  .ctx-item:hover {
+    background: #2b2b2b;
   }
 
   /* Active node = very visible */

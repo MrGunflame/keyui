@@ -3,9 +3,9 @@
 
   let { appState } = $props();
 
-  let goals = $state<[]>([]);
-
-  async function loadOpenGoals(client, proof) {
+  let goals = $state<NodeDesc[]>([]);
+ 
+  async function loadOpenGoals(client: any, proof: any) {
     const goals = await client.proofGoals(proof, true, true);
     return goals;
   }
