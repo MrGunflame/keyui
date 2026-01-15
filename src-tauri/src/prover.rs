@@ -172,6 +172,22 @@ impl<R> Reader<R> {
         R: AsyncRead + Unpin,
     {
         loop {
+            match parse_message(&self.buf[..self.bytes_init]) {
+                Ok((msg, bytes_consumed)) => {
+                    let resp =
+                        serde_json::from_slice::<Message>(msg).map_err(ReadError::InvalidJson)?;
+                    dbg!(&resp);
+
+                    debug_assert!(self.bytes_init >= bytes_consumed);
+                    self.buf.copy_within(bytes_consumed.., 0);
+                    self.bytes_init -= bytes_consumed;
+
+                    return Ok(resp);
+                }
+                Err(ParseError::NeedMoreData) => {}
+                Err(err) => return Err(ReadError::Parse(err)),
+            }
+
             if self.buf.len() - self.bytes_init < 256 {
                 self.buf.resize(self.buf.len() * 2, 0);
                 debug_assert!(self.buf.len() - self.bytes_init >= 256);
@@ -186,21 +202,6 @@ impl<R> Reader<R> {
             self.bytes_init += bytes_read;
 
             dbg!(bstr::BStr::new(&self.buf[..self.bytes_init]));
-
-            let (msg, bytes_consumed) = match parse_message(&self.buf[..self.bytes_init]) {
-                Ok(v) => v,
-                Err(ParseError::NeedMoreData) => continue,
-                Err(err) => return Err(ReadError::Parse(err)),
-            };
-
-            let resp = serde_json::from_slice::<Message>(msg).map_err(ReadError::InvalidJson)?;
-            dbg!(&resp);
-
-            debug_assert!(self.bytes_init >= bytes_consumed);
-            self.buf.copy_within(bytes_consumed.., 0);
-            self.bytes_init -= bytes_consumed;
-
-            return Ok(resp);
         }
     }
 }
