@@ -10,35 +10,33 @@
 
   let nodes = $state<Node[]>([]);
   
-  
   type CtxMenuState = {
-  open: boolean;
-  x: number;
-  y: number;
-  node: TreeNodeDesc | null;
-};
-
-let ctxMenu = $state<CtxMenuState>({
-  open: false,
-  x: 0,
-  y: 0,
-  node: null,
-});
-
-function openCtxMenu(e: MouseEvent, node: TreeNodeDesc) {
-  e.preventDefault();
-  ctxMenu = {
-    open: true,
-    x: e.clientX,
-    y: e.clientY,
-    node,
+    open: boolean;
+    x: number;
+    y: number;
+    node: TreeNodeDesc | null;
   };
-}
 
-function closeCtxMenu() {
-  ctxMenu.open = false;
-}
+  let ctxMenu = $state<CtxMenuState>({
+    open: false,
+    x: 0,
+    y: 0,
+    node: null,
+  });
 
+  function openCtxMenu(e: MouseEvent, node: TreeNodeDesc) {
+    e.preventDefault();
+    ctxMenu = {
+      open: true,
+      x: e.clientX,
+      y: e.clientY,
+      node,
+    };
+  }
+
+  function closeCtxMenu() {
+    ctxMenu.open = false;
+  }
 
   function statusFromName(name: string) {
     const up = name.toUpperCase();
@@ -144,43 +142,45 @@ function closeCtxMenu() {
   .open { background: #662222; }
   .closed { background: #225522; }
   .unknown { background: #333; }
+  
   .ctx-backdrop {
-  position: fixed;
-  inset: 0;
-  z-index: 999;
-}
+    position: fixed;
+    inset: 0;
+    z-index: 999;
+  }
 
-.ctx-menu {
-  position: fixed;
-  z-index: 1000;
-  min-width: 220px;
-  background: #1f1f1f;
-  border: 1px solid #444;
-  border-radius: 8px;
-  padding: 8px;
-  box-shadow: 0 10px 25px rgba(0,0,0,0.4);
-}
+  .ctx-menu {
+    position: fixed;
+    z-index: 1000;
+    min-width: 220px;
+    background: #1f1f1f;
+    border: 1px solid #444;
+    border-radius: 8px;
+    padding: 8px;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.4);
+  }
 
-.ctx-title {
-  font-size: 12px;
-  opacity: 0.8;
-  padding: 6px 8px;
-  border-bottom: 1px solid #333;
-  margin-bottom: 6px;
-}
+  .ctx-title {
+    font-size: 12px;
+    opacity: 0.8;
+    padding: 6px 8px;
+    border-bottom: 1px solid #333;
+    margin-bottom: 6px;
+  }
 
-.ctx-item {
-  width: 100%;
-  text-align: left;
-  padding: 8px;
-  border: 0;
-  background: transparent;
-  color: white;
-  cursor: not-allowed;
-  border-radius: 6px;
-  opacity: 0.7;
-}
+  .ctx-item {
+    width: 100%;
+    text-align: left;
+    padding: 8px;
+    border: 0;
+    background: transparent;
+    color: white;
+    cursor: not-allowed;
+    border-radius: 6px;
+    opacity: 0.7;
+  }
 
-.ctx-item:hover {
-  background: #2b2b2b;
-}</style>
+  .ctx-item:hover {
+    background: #2b2b2b;
+  }
+</style>
