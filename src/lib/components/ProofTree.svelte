@@ -66,7 +66,12 @@
     return nodes;
   }
 
+  // Rerender whenever proof tree change signal is received.
+  let waker = appState.proofTreeChanged.subscribe();
+
   $effect(() => {
+    $waker;
+    
     if (appState.proof == null) {
       if (DEMO_TREE) {
         nodes = makeDemoNodes();
