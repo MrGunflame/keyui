@@ -1,21 +1,24 @@
-use std::io::{self, PipeReader, PipeWriter, Read, Write};
-use std::net::TcpStream;
-use std::path::PathBuf;
-use std::process::Command;
+use std::borrow::Cow;
+use std::collections::HashMap;
+use std::ffi::OsStr;
+use std::io;
+use std::process::Stdio;
 use std::str::FromStr;
-use std::sync::{LazyLock, OnceLock};
-use std::time::Duration;
+use std::sync::OnceLock;
 
+use bstr::BString;
+use futures::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt};
+use futures::{pin_mut, select, FutureExt};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use thiserror::Error;
 use tokio::sync::{mpsc, oneshot};
 
-static CHANNEL: OnceLock<(mpsc::UnboundedSender<(String, Value, oneshot::Sender<Message>)>)> =
+static CHANNEL: OnceLock<mpsc::UnboundedSender<(String, Value, oneshot::Sender<Value>)>> =
     OnceLock::new();
 
 #[tauri::command]
-pub async fn send_msg(method: String, params: Value) -> Message {
+pub async fn send_msg(method: String, params: Value) -> Value {
     let tx = CHANNEL.get().unwrap();
 
     let (resp_tx, resp_rx) = oneshot::channel();
@@ -26,81 +29,113 @@ pub async fn send_msg(method: String, params: Value) -> Message {
 }
 
 pub fn start_prover() {
-    let (stdin_rx, stdin_tx) = io::pipe().unwrap();
-    let (stdout_rx, stdout_tx) = io::pipe().unwrap();
+    let (tx, rx) = mpsc::unbounded_channel::<(String, Value, oneshot::Sender<Value>)>();
+    CHANNEL.set(tx).unwrap();
 
     std::thread::spawn(move || {
         let mut jar_path = std::env::current_dir().unwrap();
         jar_path.push("api.jar");
 
-        let run_cmd = || -> Result<(), Box<dyn std::error::Error>> {
-            let status = Command::new("java")
-                .arg("-jar")
-                .arg(&jar_path)
-                .arg("--std")
-                .stdin(stdin_rx)
-                .stdout(stdout_tx)
-                .spawn()?
-                .wait()?;
-
-            if !status.success() {
-                Err("process exited with non-zero status code".into())
-            } else {
-                Ok(())
-            }
-        };
-
-        if let Err(err) = run_cmd() {
-            eprintln!("Failed to start prover: {}", err);
-            eprintln!(
-                "Please ensure java is available in $PATH and the api is placed at {}",
-                jar_path.to_string_lossy()
-            );
-            std::process::exit(1);
-        }
-    });
-
-    let mut conn = Connection::new(stdin_tx, stdout_rx);
-
-    let (tx, mut rx) = mpsc::unbounded_channel::<(String, Value, oneshot::Sender<Message>)>();
-    CHANNEL.set(tx).unwrap();
-
-    std::thread::spawn(move || {
         async_io::block_on(async move {
-            while let Some((method, params, tx)) = rx.recv().await {
-                conn.send(&method, &params).unwrap();
-                let resp = conn.recv().unwrap();
-                tx.send(resp).unwrap();
+            if let Err(err) = run_cmd(&jar_path, rx).await {
+                eprintln!("Failed to start prover: {}", err);
+                eprintln!(
+                    "Please ensure java is available in $PATH and the api is placed at {}",
+                    jar_path.to_string_lossy()
+                );
+                std::process::exit(1);
             }
         });
     });
 }
 
-pub struct Connection {
-    tx: PipeWriter,
-    rx: PipeReader,
-    buf: Vec<u8>,
-    bytes_init: usize,
-}
+async fn run_cmd(
+    jar_path: impl AsRef<OsStr>,
+    mut channel: mpsc::UnboundedReceiver<(String, Value, oneshot::Sender<Value>)>,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let mut child = async_process::Command::new("java")
+        .arg("-jar")
+        .arg(&jar_path)
+        .arg("--std")
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .spawn()?;
 
-impl Connection {
-    pub fn new(tx: PipeWriter, rx: PipeReader) -> Self {
-        Self {
-            tx,
-            rx,
-            buf: vec![0; 256],
-            bytes_init: 0,
+    let stdin = child.stdin.take().unwrap();
+    let stdout = child.stdout.take().unwrap();
+    let mut writer = Writer::new(stdin);
+    let mut reader = Reader::new(stdout);
+
+    let status_fut = child.status().fuse();
+    pin_mut!(status_fut);
+
+    let mut next_id: u64 = 0;
+
+    // TODO: Timeouts
+    let mut inflight = HashMap::new();
+
+    loop {
+        select! {
+            res = status_fut => {
+                let status = res?;
+                if !status.success() {
+                    return Err("process exited with non-zero status code".into());
+                } else {
+                    return Ok(());
+                }
+            }
+            res = channel.recv().fuse() => {
+                let Some((method, params, resp_tx)) = res else {
+                    return Ok(());
+                };
+
+                let id = next_id;
+                next_id += 1;
+
+                writer.send(&method, params, id).await.unwrap();
+
+                inflight.insert(id, resp_tx);
+            }
+            msg = reader.recv().fuse() => {
+                let msg = msg.unwrap();
+
+                match msg {
+                    Message::Response { id, msg } => {
+                        let Some(id) = id else {
+                            continue;
+                        };
+
+                        let Some(resp_tx) = inflight.remove(&id) else {
+                            continue;
+                        };
+
+                        resp_tx.send(msg).ok();
+                    }
+                }
+            }
         }
     }
+}
 
-    pub fn send<T>(&mut self, method: &str, req: &T) -> Result<(), io::Error>
+#[derive(Debug)]
+struct Writer<W> {
+    writer: W,
+}
+
+impl<W> Writer<W> {
+    pub fn new(writer: W) -> Self {
+        Self { writer }
+    }
+
+    pub async fn send<T>(&mut self, method: &str, req: T, id: u64) -> Result<(), io::Error>
     where
         T: Serialize,
+        W: AsyncWrite + Unpin,
     {
         let req = Request {
-            jsonrpc: "2.0",
-            method,
-            id: Some(1),
+            jsonrpc: Cow::Borrowed("2.0"),
+            method: Cow::Borrowed(method),
+            id: Some(id),
             params: Some(req),
         };
 
@@ -111,18 +146,38 @@ impl Connection {
         let framed = format!("Content-Length: {}\r\n\r\n{}", buf.len(), buf);
         dbg!(&framed);
 
-        self.tx.write_all(framed.as_bytes())?;
+        self.writer.write_all(framed.as_bytes()).await?;
         Ok(())
     }
+}
 
-    pub fn recv(&mut self) -> Result<Message, ReadError> {
+#[derive(Debug)]
+struct Reader<R> {
+    reader: R,
+    buf: Vec<u8>,
+    bytes_init: usize,
+}
+
+impl<R> Reader<R> {
+    pub fn new(reader: R) -> Self {
+        Self {
+            reader,
+            buf: vec![0; 256],
+            bytes_init: 0,
+        }
+    }
+
+    pub async fn recv(&mut self) -> Result<Message, ReadError>
+    where
+        R: AsyncRead + Unpin,
+    {
         loop {
             if self.buf.len() - self.bytes_init < 256 {
                 self.buf.resize(self.buf.len() * 2, 0);
                 debug_assert!(self.buf.len() - self.bytes_init >= 256);
             }
 
-            let bytes_read = match self.rx.read(&mut self.buf[self.bytes_init..]) {
+            let bytes_read = match self.reader.read(&mut self.buf[self.bytes_init..]).await {
                 Ok(0) => return Err(ReadError::Io(io::ErrorKind::UnexpectedEof.into())),
                 Ok(n) => n,
                 Err(err) => return Err(ReadError::Io(err)),
@@ -130,35 +185,40 @@ impl Connection {
 
             self.bytes_init += bytes_read;
 
+            dbg!(bstr::BStr::new(&self.buf[..self.bytes_init]));
+
             let (msg, bytes_consumed) = match parse_message(&self.buf[..self.bytes_init]) {
                 Ok(v) => v,
                 Err(ParseError::NeedMoreData) => continue,
                 Err(err) => return Err(ReadError::Parse(err)),
             };
 
-            let resp = serde_json::from_slice::<Response>(msg).map_err(ReadError::InvalidJson)?;
+            let resp = serde_json::from_slice::<Message>(msg).map_err(ReadError::InvalidJson)?;
             dbg!(&resp);
 
             debug_assert!(self.bytes_init >= bytes_consumed);
             self.buf.copy_within(bytes_consumed.., 0);
             self.bytes_init -= bytes_consumed;
 
-            let mut msg = Message::Null(Value::Null);
-            if let Some(result) = resp.result {
-                msg = Message::Result(result);
-            }
-
-            if let Some(err) = resp.error {
-                msg = Message::Err(err);
-            }
-
-            return Ok(msg);
+            return Ok(resp);
         }
     }
 }
 
-#[derive(Clone, Debug, Serialize)]
+#[derive(Clone, Debug, Deserialize)]
+#[serde(untagged)]
 pub enum Message {
+    /// Response to a previous [`Request`].
+    Response {
+        id: Option<u64>,
+        #[serde(flatten)]
+        msg: Value,
+    },
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum ResponseMessage {
     #[serde(rename = "result")]
     Result(Value),
     #[serde(rename = "error")]
@@ -167,20 +227,12 @@ pub enum Message {
     Null(Value),
 }
 
-#[derive(Clone, Debug, Serialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 struct Request<'a, T> {
-    jsonrpc: &'static str,
-    method: &'a str,
+    jsonrpc: Cow<'static, str>,
+    method: Cow<'a, str>,
     id: Option<u64>,
-    params: Option<&'a T>,
-}
-
-#[derive(Clone, Debug, Deserialize)]
-struct Response {
-    jsonrpc: String,
-    id: Option<u64>,
-    error: Option<Value>,
-    result: Option<Value>,
+    params: Option<T>,
 }
 
 #[derive(Debug, Error)]
@@ -197,8 +249,8 @@ enum ReadError {
 enum ParseError {
     #[error("need more data")]
     NeedMoreData,
-    #[error("unexpected token {found:?}, expected {expected:?}")]
-    UnexpectedToken { expected: Vec<u8>, found: Vec<u8> },
+    #[error("unexpected token {found}, expected {expected}")]
+    UnexpectedToken { expected: BString, found: BString },
     #[error("invalid string: {0}")]
     InvalidString(std::str::Utf8Error),
     #[error("invalid integer: {0}")]
@@ -248,8 +300,8 @@ impl<'a> Parser<'a> {
             .data
             .strip_prefix(lit)
             .ok_or(ParseError::UnexpectedToken {
-                expected: lit.to_vec(),
-                found: self.data.to_vec(),
+                expected: BString::new(lit.to_vec()),
+                found: BString::new(self.data.to_vec()),
             })?;
 
         self.data = rem;

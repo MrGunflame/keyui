@@ -25,6 +25,30 @@ export class Client {
         return await this.send("meta/version", null);
     }
 
+
+    public async load(params: LoadParams): Promise<ProofId> {
+        let framed: any = {
+            "problemFile": {
+                "uri": params.problemFile,
+            },
+            "$class": "org.keyproject.key.api.data.LoadParams",
+        };
+
+        if (params.bootClassPath) {
+            framed.bootClassPath = { "uri": params.bootClassPath };
+        }
+
+        if (params.classPath) {
+            framed.classPath = params.classPath.map((x) => ({ "uri": x }));
+        }
+
+        if (params.includes) {
+            framed.includes = params.includes.map((x) => ({ "uri": x }));
+        }
+
+        return await this.send("loading/load", framed);
+    }
+
     public async loadKey(content: string): Promise<ProofId> {
         return await this.send("loading/loadKey", content);
     }
@@ -48,6 +72,13 @@ export class Client {
 
     public async proofGoals(proof: ProofId, onlyOpened: boolean, onlyEnabled: boolean): Promise<NodeDesc> {
         return await this.send("proof/goals", [proof, onlyOpened, onlyEnabled]);
+    }
+
+    public async proofAuto(proof: ProofId, options: StrategyOptions): Promise<ProofStatus> {
+        let options_framed: any = options;
+        options_framed.$class = "org.keyproject.key.api.data.StrategyOptions";
+
+        return await this.send("proof/auto", [proof, options_framed]);
     }
 }
 
@@ -92,7 +123,14 @@ export type PrintOptions = {
 export type NodeTextDesc = {
     id: NodeTextId,
     result: string,
+    terms: NodeTextSpan[];
 };
+
+export type NodeTextSpan = {
+    start: number;
+    end: number;
+    children: NodeTextSpan[];
+}
 
 export type NodeTextId = {
     nodeId: NodeId,
@@ -109,4 +147,27 @@ export type NodeDesc = {
     scriptRuleApplication: boolean;
     children: NodeDesc[];
     description: string;
+};
+
+export type LoadParams = {
+    problemFile: string;
+    classPath: string[] | null;
+    bootClassPath: string | null;
+    includes: string[] | null;
+};
+
+// If null, the server chooses the default value.
+export type StrategyOptions = {
+    method: string | null;
+    dep: string | null;
+    query: string | null;
+    nonLinArith: string | null;
+    stopMode: string | null;
+    maxSteps: number;
+};
+
+export type ProofStatus = {
+    id: ProofId;
+    openGoals: number;
+    closeGoals: number;
 };

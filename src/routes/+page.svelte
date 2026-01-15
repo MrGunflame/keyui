@@ -10,18 +10,24 @@
   import type { ProofId, NodeId } from './api';
   import Modal from './Modal.svelte';
 
+  import { ReactiveSignal } from '$lib/reactive.ts';
+  import { writable, type Writable } from "svelte/store";
+
   type AppState = {
     client: Client,
     // Current proof state (key file state).
     proof: ProofId | null,
     // Currently selected node in the proof tree.
     active_node: NodeId | null,
+    // Subscriber called whenever the proof tree changes.
+    proofTreeChanged: ReactiveSignal, 
   };
 
   let appState: AppState = $state({
     client: new Client(),
     proof: null,
     active_node:null,
+    proofTreeChanged: new ReactiveSignal(),
   });
 
   let errorState: string | null = $state(null);

@@ -19,18 +19,10 @@
     }
 
     async function openKeyFile(path: string) {
-        const file = await open(path, {
-            read: true,
+        const id = await appState.client.load({
+            problemFile: path,
         });
 
-        const stat = await file.stat();
-        const buf = new Uint8Array(stat.size);
-        await file.read(buf);
-
-        const text = new TextDecoder().decode(buf);
-        await file.close();
-
-        const id = await appState.client.loadKey(text);
         appState.proof = id;
         const root = await appState.client.proofTreeRoot(id);
         appState.active_node = root.id;
@@ -40,6 +32,25 @@
         openKeyFile(path).catch(err => {
             onError(err.toString());
         });
+    }
+
+    async function autoProof() {
+        if (!appState.proof) {
+            return;
+        }
+
+        const options = {
+            method: null,
+            dep: null,
+            query: null,
+            nonLinArith: null,
+            maxSteps: 1000,
+        };
+
+        const status = await appState.client.proofAuto(appState.proof, options);
+        console.log(status);
+
+        appState.proofTreeChanged.notify();
     }
 </script>
 
@@ -58,18 +69,12 @@
             {/if}
         </li>
         <li>
-            <button onclick={toggleBigButton}>Big Button</button>
+            <button onclick={toggleBigButton}>Proof</button>
             {#if big_button}
             <Menu>
                 <ul class="submenu">
                     <li>
-                        <button>Button A</button>
-                    </li>
-                    <li>
-                        <button>Button B</button>
-                    </li>
-                    <li>
-                        <button>Button C</button>
+                        <button onclick={autoProof}>Auto</button>
                     </li>
                 </ul>
             </Menu>
