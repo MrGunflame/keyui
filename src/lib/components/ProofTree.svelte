@@ -3,13 +3,12 @@
 
   let { appState } = $props();
 
-  type Node = {
-    node: TreeNodeDesc;
-    depth: number;
-  };
+  type Node =
+    | { kind: "real"; node: TreeNodeDesc; depth: number }
+    | { kind: "virtual"; label: string; depth: number };
 
   let nodes = $state<Node[]>([]);
-  
+
   type CtxMenuState = {
     open: boolean;
     x: number;
@@ -45,7 +44,7 @@
     return "unknown";
   }
 
-  // Leaf vs internal (computed from list order + depth)
+  // Leaf vs internal computed from display list + depth
   function isLeaf(index: number) {
     const currentDepth = nodes[index]?.depth ?? 0;
     const nextDepth = nodes[index + 1]?.depth ?? -1;
@@ -56,43 +55,76 @@
     return appState.active_node?.nodeId == node.id.nodeId;
   }
 
-  // DEV ONLY: show a small fake tree when no proof is loaded (so we can work on UI)
+  // DEV ONLY: show a small fake tree when no proof is loaded
+  // Keep FALSE for PR; set TRUE locally if you need to test without backend.
   const DEMO_TREE = false;
 
   function makeDemoNodes(): Node[] {
     const fake = (nodeId: number, name: string) =>
       ({ id: { nodeId }, name } as unknown as TreeNodeDesc);
 
+    // Important: NO "0" node is displayed. Root starts at 1.
     return [
-      { node: fake(0, "OPEN Root"), depth: 0 },
-      { node: fake(1, "OPEN Internal A"), depth: 1 },
-      { node: fake(2, "CLOSED Leaf A1"), depth: 2 },
-      { node: fake(3, "OPEN Leaf A2"), depth: 2 },
-      { node: fake(4, "CLOSED Internal B"), depth: 1 },
-      { node: fake(5, "CLOSED Leaf B1"), depth: 2 },
+      { kind: "real", node: fake(1, "OPEN Root"), depth: 0 },
+      { kind: "real", node: fake(2, "OPEN Step 1"), depth: 0 },
+      { kind: "real", node: fake(3, "OPEN Step 2"), depth: 0 },
+      { kind: "real", node: fake(4, "OPEN Step 3"), depth: 0 },
+
+      // Branch point
+      { kind: "real", node: fake(5, "OPEN Branching Rule"), depth: 0 },
+      { kind: "virtual", label: "5.1", depth: 1 },
+      { kind: "real", node: fake(6, "CLOSED Left leaf"), depth: 2 },
+      { kind: "virtual", label: "5.2", depth: 1 },
+      { kind: "real", node: fake(7, "OPEN Right path"), depth: 2 },
+      { kind: "real", node: fake(8, "CLOSED Right leaf"), depth: 2 },
     ];
   }
 
-  async function loadTree(client:any , proof:any) {
-    let nodes = [];
-    let stack: { id: any; depth: number }[] = [];
+  /**
+   * Collapsed tree loader (Issue #38):
+   * - Exactly 1 child => keep SAME depth (no extra indentation).
+   * - >=2 children => create virtual branch nodes (n.1, n.2, ...) and indent those branches.
+   *
+   * Note: We do NOT display a virtual "0" node. It exists only as an internal modeling concept.
+   */
+  async function loadTreeCollapsed(client: any, proof: any): Promise<Node[]> {
+    const out: Node[] = [];
 
+    const childrenCache = new Map<number, TreeNodeDesc[]>();
 
-    let root = await client.proofTreeRoot(proof);
-    nodes.push({ node: root, depth: 0 });
-    stack.push({ id: root.id, depth: 0 });
-
-    while (stack.length != 0) {
-      let { id, depth } = stack.pop()!;
-      let elems = await client.proofTreeChildren(proof, id);
-
-      for (const elem of elems) {
-        nodes.push({ node: elem, depth: depth + 1 });
-        stack.push({ id: elem.id, depth: depth + 1 });
-      }
+    async function getChildren(node: TreeNodeDesc): Promise<TreeNodeDesc[]> {
+      const id = node.id.nodeId;
+      if (childrenCache.has(id)) return childrenCache.get(id)!;
+      const kids = await client.proofTreeChildren(proof, node.id);
+      childrenCache.set(id, kids);
+      return kids;
     }
 
-    return nodes;
+    async function emit(node: TreeNodeDesc, depth: number): Promise<void> {
+      out.push({ kind: "real", node, depth });
+
+      const kids = await getChildren(node);
+
+      // Linear chain: do NOT increase depth
+      if (kids.length === 1) {
+        await emit(kids[0], depth);
+        return;
+      }
+
+      // Branch: create virtual nodes n.1, n.2, ...
+      if (kids.length >= 2) {
+        for (let i = 0; i < kids.length; i++) {
+          const label = `${node.id.nodeId}.${i + 1}`;
+          out.push({ kind: "virtual", label, depth: depth + 1 });
+          await emit(kids[i], depth + 2);
+        }
+      }
+      // kids.length === 0 => leaf
+    }
+
+    const root = await client.proofTreeRoot(proof);
+    await emit(root, 0);
+    return out;
   }
 
   // Rerender whenever proof tree change signal is received.
@@ -100,15 +132,13 @@
 
   $effect(() => {
     $waker;
-    
+
     if (appState.proof == null) {
-      if (DEMO_TREE) {
-        nodes = makeDemoNodes();
-      }
+      nodes = DEMO_TREE ? makeDemoNodes() : [];
       return;
     }
 
-    loadTree(appState.client, appState.proof).then(n => {
+    loadTreeCollapsed(appState.client, appState.proof).then((n) => {
       nodes = n;
     });
   });
@@ -117,28 +147,34 @@
 <div>
   <h3>Proof Tree</h3>
   <ul class="node-list">
-    {#each nodes as node, index}
-      <li style="margin-left: {node.depth * 14}px;">
-        <button
-          class="node {statusFromName(node.node.name)} {isActive(node.node) ? "active" : ""} {isLeaf(index) ? "leaf" : "internal"}"
-          onclick={() => (appState.active_node = node.node.id)}
-        oncontextmenu={(e)=>openCtxMenu(e,node.node)}
-        >
-          {node.node.id.nodeId}: {node.node.name}
-        </button>
+    {#each nodes as item, index}
+      <li style="margin-left: {item.depth * 14}px;">
+        {#if item.kind === "real"}
+          <button
+            class="node {statusFromName(item.node.name)} {isActive(item.node) ? "active" : ""} {isLeaf(index) ? "leaf" : "internal"}"
+            onclick={() => (appState.active_node = item.node.id)}
+            oncontextmenu={(e) => openCtxMenu(e, item.node)}
+          >
+            {item.node.id.nodeId}: {item.node.name}
+          </button>
+        {:else}
+          <div class="virtual">{item.label}</div>
+        {/if}
       </li>
     {/each}
   </ul>
+
   {#if ctxMenu.open}
     <div class="ctx-backdrop" onclick={closeCtxMenu}>
       <div
         class="ctx-menu"
+        style="left: {ctxMenu.x}px; top: {ctxMenu.y}px;"
         onclick={(e) => e.stopPropagation()}
       >
         <div class="ctx-title">Node {ctxMenu.node?.id.nodeId}</div>
         <button class="ctx-item" disabled>Action A</button>
-        <button class="ctx-item" disabled> Action B</button>
-        <button class="ctx-item" disabled> Action C</button>
+        <button class="ctx-item" disabled>Action B</button>
+        <button class="ctx-item" disabled>Action C</button>
       </div>
     </div>
   {/if}
@@ -172,10 +208,21 @@
     border-color: rgba(255, 255, 255, 0.22);
   }
 
+  .virtual {
+    width: 100%;
+    padding: 6px 10px;
+    margin: 6px 0;
+    border-radius: 8px;
+    border: 1px dashed rgba(255, 255, 255, 0.20);
+    color: rgba(255, 255, 255, 0.8);
+    background: rgba(255, 255, 255, 0.04);
+    font-weight: 600;
+  }
+
   .open { background: #662222; }
   .closed { background: #225522; }
   .unknown { background: #333; }
-  
+
   .ctx-backdrop {
     position: fixed;
     inset: 0;
@@ -217,27 +264,24 @@
     background: #2b2b2b;
   }
 
-  /* Active node = very visible */
   .node.active {
     outline: 2px solid rgba(80, 200, 120, 0.95);
     outline-offset: 2px;
   }
 
-  /* open / closed / unknown */
   .node.open {
     background: #6a2525;
   }
 
   .node.closed {
     background: #1f4f2a;
-    opacity: 0.55; /* closed nodes look processed */
+    opacity: 0.55;
   }
 
   .node.unknown {
     background: #333;
   }
 
-  /* leaf vs internal */
   .node.leaf {
     border-left: 6px solid rgba(255, 255, 255, 0.16);
   }
@@ -246,8 +290,8 @@
     border-left: 6px solid rgba(255, 255, 255, 0.34);
   }
 
-  /* active + closed should still be readable */
   .node.closed.active {
     opacity: 0.9;
   }
 </style>
+
