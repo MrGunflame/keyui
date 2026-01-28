@@ -259,12 +259,19 @@ enum ParseError {
 }
 
 fn parse_message(data: &[u8]) -> Result<(&[u8], usize), ParseError> {
-    let mut parser = Parser {
-        data,
-        bytes_read: 0,
+    // 1) Find the beginning of a real JSON-RPC message
+    let start = match memchr::memmem::find(data, b"Content-Length: ") {
+        Some(i) => i,
+        None => return Err(ParseError::NeedMoreData),
     };
 
-    // We cannot parse the header until complete.
+    // 2) Parse starting from Content-Length, ignoring junk before
+    let mut parser = Parser {
+        data: &data[start..],
+        bytes_read: start,
+    };
+
+    // Wait until full header is available
     if memchr::memmem::find(parser.data, b"\r\n\r\n").is_none() {
         return Err(ParseError::NeedMoreData);
     }
@@ -281,6 +288,8 @@ fn parse_message(data: &[u8]) -> Result<(&[u8], usize), ParseError> {
 
     Ok((payload, parser.bytes_read))
 }
+
+
 
 #[derive(Clone, Debug)]
 struct Parser<'a> {
