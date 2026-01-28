@@ -80,8 +80,11 @@ export class Client {
 
         return await this.send("proof/auto", [proof, options_framed]);
     }
+
+
 }
 
+//Custom error class for API errors
 class ApiError {
     code: number = 0;
     data: string = "";
@@ -171,3 +174,7 @@ export type ProofStatus = {
     openGoals: number;
     closeGoals: number;
 };
+
+
+
+
