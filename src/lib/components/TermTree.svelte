@@ -7,9 +7,11 @@
         // This includes all children.
         // These should be marked when the span is hovered.
         spans: number[];
+        // The character index where the text for this span starts.
+        textStart: number;
     };
 
-    function expandTerms(seq: string, terms: NodeTextSpan[], startIndex: number): Span[] {
+    function expandTerms(seq: string, terms: NodeTextSpan[], startIndex: number, textStart: number): Span[] {
         terms.sort((a, b) => (a.start - b.start));
 
         let output = [];
@@ -24,12 +26,13 @@
                 output.push({
                     content: s,
                     spans: [],
+                    textStart: textStart + pos,
                 });
             }
             
             let s = seq.slice(term.start, term.end);
             if (s.length != 0) {
-                let subterms = expandTerms(s, term.children, startIndex + output.length);
+                let subterms = expandTerms(s, term.children, startIndex + output.length, textStart + term.start);
                 output = output.concat(subterms);
             }
 
@@ -43,6 +46,7 @@
             output.push({
                 content: s,
                 spans: [],
+                textStart: textStart + pos,
             });
         }
 
@@ -56,7 +60,7 @@
         return output;
     }
 
-    let spans = expandTerms(sequent.result, sequent.terms, 0);
+    let spans = expandTerms(sequent.result, sequent.terms, 0, 0);
     let hoveredElement = $state<number | null>(null);
 
     function onMouseOver(index: number) {
