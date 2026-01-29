@@ -1,5 +1,7 @@
 <script lang="ts">
-    let { sequent } = $props();
+    import type { TermActionDesc } from "../../routes/api";
+    
+    let { appState, sequent } = $props();
 
     type Span = {
         content: string;
@@ -7,9 +9,11 @@
         // This includes all children.
         // These should be marked when the span is hovered.
         spans: number[];
+        // The character index where the text for this span starts.
+        textStart: number;
     };
 
-    function expandTerms(seq: string, terms: NodeTextSpan[], startIndex: number): Span[] {
+    function expandTerms(seq: string, terms: NodeTextSpan[], startIndex: number, textStart: number): Span[] {
         terms.sort((a, b) => (a.start - b.start));
 
         let output = [];
@@ -24,12 +28,13 @@
                 output.push({
                     content: s,
                     spans: [],
+                    textStart: textStart + pos,
                 });
             }
             
             let s = seq.slice(term.start, term.end);
             if (s.length != 0) {
-                let subterms = expandTerms(s, term.children, startIndex + output.length);
+                let subterms = expandTerms(s, term.children, startIndex + output.length, textStart + term.start);
                 output = output.concat(subterms);
             }
 
@@ -43,6 +48,7 @@
             output.push({
                 content: s,
                 spans: [],
+                textStart: textStart + pos,
             });
         }
 
@@ -56,7 +62,7 @@
         return output;
     }
 
-    let spans = expandTerms(sequent.result, sequent.terms, 0);
+    let spans = expandTerms(sequent.result, sequent.terms, 0, 0);
     let hoveredElement = $state<number | null>(null);
 
     function onMouseOver(index: number) {
@@ -77,11 +83,31 @@
         return spans[hoveredElement].spans.includes(index);
     }
 
-    let selectedPath: number[] | null = null;
+    type ContextMenuState = {
+        open: boolean;
+        x: number;
+        y: number;
+        actions: TermActionDesc[],
+    };
 
-    function handleSelect(path: number[]) {
-        selectedPath = path;
-        console.log("Clicked path:", path);
+    let contextMenuState = $state<ContextMenuState>({
+        open: true,
+        x: 0,
+        y: 0,
+        actions: [],
+    });
+
+    function onClick(event: MouseEvent, index: number) {
+        const textStart = spans[index].textStart;
+
+        appState.client.goalActions(sequent.id, textStart).then(actions => {
+            contextMenuState = {
+                open: true,
+                x: event.pageX,
+                y: event.pageY,
+                actions,
+            };
+        });
     }
 </script>
 
@@ -90,11 +116,22 @@
     <span
         onmouseover={(e) => onMouseOver(index)}
         onmouseout={(e) => onMouseOut(index)}
+        onclick={(e) => onClick(e, index)}
         class:span-hover={isMarked(index)}
     >
         {span.content}
     </span>
     {/each}
+
+    {#if contextMenuState.open}
+    <div class="ctx-menu" style="top: {contextMenuState.y}px; left: {contextMenuState.x}px;">
+        <ul>
+            {#each contextMenuState.actions as action}
+                <li><button>{action.displayName}</button></li>
+            {/each}
+        </ul>
+    </div>
+    {/if}
 </div>
 
 <style>
@@ -115,4 +152,15 @@
         background-color: gray;
     }
 
+    .ctx-menu {
+        position: absolute;
+        background: #1f1f1f;
+        padding: 5px;
+    }
+
+    .ctx-menu ul {
+        list-style-type: none;
+        padding: 0;
+        margin: 0;
+    }
 </style>

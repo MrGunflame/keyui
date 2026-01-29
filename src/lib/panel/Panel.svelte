@@ -12,5 +12,8 @@
         padding: 10px;
         border-radius: 6px;
         height: 100%;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
     }
 </style>
