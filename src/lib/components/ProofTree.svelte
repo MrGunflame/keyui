@@ -79,7 +79,6 @@
   async function loadTreeCollapsed(client: any, proof: any): Promise<Node[]> {
     const out: Node[] = [];
 
-    // IMPORTANT: use numeric nodeId in cache key
     const childrenCache = new Map<number, TreeNodeDesc[]>();
 
     const idOf = (n: TreeNodeDesc) => Number(n.id.nodeId);
@@ -95,10 +94,7 @@
     async function emit(node: TreeNodeDesc, depth: number): Promise<void> {
       const nodeId = idOf(node);
 
-      // ✅ Never display node 0 (even if it is a real backend node)
-      if (nodeId !== 0) {
-        out.push({ kind: "real", node, depth });
-      }
+      out.push({ kind: "real", node, depth });
 
       const kids = await getChildren(node);
 
@@ -167,7 +163,7 @@
         style="left: {ctxMenu.x}px; top: {ctxMenu.y}px;"
         onclick={(e) => e.stopPropagation()}
       >
-        <div class="ctx-title">Node {Number(ctxMenu.node?.id.nodeId)}</div>
+        <div class="ctx-title">Node {ctxMenu.node?.id.nodeId}</div>
         <button class="ctx-item" disabled>Action A</button>
         <button class="ctx-item" disabled>Action B</button>
         <button class="ctx-item" disabled>Action C</button>
