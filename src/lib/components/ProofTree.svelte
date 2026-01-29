@@ -114,7 +114,7 @@
   });
 </script>
 
-<div>
+<div class="proof-tree-container">
   <h3>Proof Tree</h3>
   <ul class="node-list">
     {#each nodes as node, index}
@@ -145,9 +145,20 @@
 </div>
 
 <style>
-  .node-list {
+    .proof-tree-container {
+    display: flex;
+    flex-direction: column;
     height: 100%;
+    overflow: hidden;
+  }
+  .proof-tree-container h3 {
+    margin: 0 0 10px 0;
+    flex-shrink: 0;
+  }
+  .node-list {
+    flex: 1;
     overflow-y: auto;
+    overflow-x: hidden;
     list-style: none;
     padding: 0;
     margin: 0;
@@ -156,6 +167,8 @@
   .node {
     width: 100%;
     text-align: left;
+    word-wrap: break-word;
+    white-space: normal;
 
     color: white;
     border: 1px solid rgba(255, 255, 255, 0.08);
