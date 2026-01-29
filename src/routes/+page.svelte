@@ -66,7 +66,7 @@ fn main() {
 
   <div class="actions">
     <button class="play" on:click={autoProof} disabled={!appState.proof}>
-      ▶ Play
+      ▶ Auto Proof
     </button>
   </div>
 
