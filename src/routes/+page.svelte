@@ -10,7 +10,7 @@
   import type { ProofId, NodeId } from './api';
   import Modal from './Modal.svelte';
 
-  import { ReactiveSignal } from '$lib/reactive.ts';
+  import { ReactiveSignal } from '$lib/reactive';
   import { writable, type Writable } from "svelte/store";
 
   type AppState = {
@@ -26,8 +26,9 @@
   let appState: AppState = $state({
     client: new Client(),
     proof: null,
-    active_node:null,
+    active_node: null,
     proofTreeChanged: new ReactiveSignal(),
+    
   });
 
   let errorState: string | null = $state(null);
@@ -38,12 +39,40 @@ fn main() {
 }
 `;
 
+  async function autoProof() {
+    if (!appState.proof) {
+      return;
+    }
+
+    const options = {
+      method: null,
+      dep: null,
+      query: null,
+      nonLinArith: null,
+      maxSteps: 1000,
+    };
+
+    try {
+      const status = await appState.client.proofAuto(appState.proof, options);
+      console.log(status);
+      appState.proofTreeChanged.notify();
+    } catch (err: any) {
+      errorState = err?.toString?.() ?? String(err);
+    }
+  }
 </script>
 
 <main class="container">
-  <Header {appState} onError={(error) => (errorState = error)} />
+  <Header {appState} onError={(error: any) => (errorState = error)} />
+
+  <div class="actions">
+    <button class="play" on:click={autoProof} disabled={!appState.proof}>
+      ▶ Auto Proof
+    </button>
+  </div>
+
   <!-- <Api /> -->
-   {#if errorState}
+  {#if errorState}
     <Modal open={true} on:close={() => (errorState = null)}>
       <h2>Error</h2>
       <pre>
@@ -51,7 +80,7 @@ fn main() {
       </pre>
     </Modal>
   {/if}
-  
+
   <div class="layout">
     <Panel>
       <ProofTree {appState} />
@@ -63,7 +92,7 @@ fn main() {
       <GoalsPanel {appState} />
     </Panel>
   </div>
-  
+
   <section class="code-section">
     <h2>Rust example</h2>
     <CodeBlock language="rust" code={rustExample} />
@@ -71,6 +100,25 @@ fn main() {
 </main>
 
 <style>
+  .actions {
+    padding: 10px;
+    display: flex;
+    gap: 10px;
+    align-items: center;
+  }
+
+  .play {
+    padding: 8px 12px;
+    border: none;
+    cursor: pointer;
+    border-radius: 6px;
+  }
+
+  .play:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
   .layout {
     display: grid;
     grid-template-columns: 250px 1fr 250px;
@@ -81,3 +129,4 @@ fn main() {
     color: white;
   }
 </style>
+

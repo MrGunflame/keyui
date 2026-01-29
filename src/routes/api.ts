@@ -80,8 +80,13 @@ export class Client {
 
         return await this.send("proof/auto", [proof, options_framed]);
     }
+
+    public async goalActions(id: NodeTextId, caretPosition: number) {
+        return await this.send("goal/actions", [id, caretPosition]);
+    }
 }
 
+//Custom error class for API errors
 class ApiError {
     code: number = 0;
     data: string = "";
@@ -170,4 +175,18 @@ export type ProofStatus = {
     id: ProofId;
     openGoals: number;
     closeGoals: number;
+};
+
+export type TermActionDesc = {
+    commandId: TermActionId;
+    displayName: string;
+    description: string;
+    category: string | null;
+    // kind: TermActionKind;
+};
+
+export type TermActionId = {
+    nodeId: NodeId;
+    pio: string;
+    id: string;
 };
