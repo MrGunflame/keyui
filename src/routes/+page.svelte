@@ -10,7 +10,7 @@
   import type { ProofId, NodeId } from './api';
   import Modal from './Modal.svelte';
 
-  import { ReactiveSignal } from '$lib/reactive.ts';
+  import { ReactiveSignal } from '$lib/reactive';
   import { writable, type Writable } from "svelte/store";
 
   type AppState = {
@@ -28,6 +28,7 @@
     proof: null,
     active_node: null,
     proofTreeChanged: new ReactiveSignal(),
+    
   });
 
   let errorState: string | null = $state(null);
@@ -62,7 +63,7 @@ fn main() {
 </script>
 
 <main class="container">
-  <Header {appState} onError={(error) => (errorState = error)} />
+  <Header {appState} onError={(error: any) => (errorState = error)} />
 
   <div class="actions">
     <button class="play" on:click={autoProof} disabled={!appState.proof}>
