@@ -1,4 +1,5 @@
 <script lang="ts">
+    import ThemeToggle from "$lib/components/ThemeToggle.svelte";
     import Menu from './Menu.svelte';
     import FilePicker from './FilePicker.svelte';
     import { open } from '@tauri-apps/plugin-fs';
@@ -82,9 +83,11 @@
         </li>
         <li><button>About</button></li>
     </ul>
+    <ThemeToggle />
 </div>
 
 <style>
+    
 
 .header button {
     box-shadow: none;
@@ -97,10 +100,15 @@
 
 .header {
     padding: 8px 15px;
-    background-color: #222;
-    color: white;
-    border-bottom: 2px solid gray;
+    background-color: var(--c-panel);
+    color: var(--c-text);
+    border-bottom: 2px solid var(--c-border);
+
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
 }
+
 
 .top-menu {
     display: flex;
