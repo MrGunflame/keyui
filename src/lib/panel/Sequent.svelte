@@ -32,7 +32,7 @@
 <div>
     <h3>Sequent</h3>
     <!-- NOTE: That all of this is on a single line is deliberate: the pre element is whitespace/tab sensitive. -->
-    <pre><code>{#if sequent}{#key sequent}<TermTree {sequent} /> {/key}{:else}<span>{"<no sequent loaded>"}</span> {/if}</code></pre>
+    <pre><code>{#if sequent}{#key sequent}<TermTree {appState} {sequent} /> {/key}{:else}<span>{"<no sequent loaded>"}</span> {/if}</code></pre>
 </div>
 
 <style>
