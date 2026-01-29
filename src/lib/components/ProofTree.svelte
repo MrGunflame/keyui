@@ -44,7 +44,6 @@
     return "unknown";
   }
 
-  // Leaf vs internal computed from display list + depth
   function isLeaf(index: number) {
     const currentDepth = nodes[index]?.depth ?? 0;
     const nextDepth = nodes[index + 1]?.depth ?? -1;
@@ -52,25 +51,22 @@
   }
 
   function isActive(node: TreeNodeDesc) {
-    return appState.active_node?.nodeId == node.id.nodeId;
+    return Number(appState.active_node?.nodeId) === Number(node.id.nodeId);
   }
 
-  // DEV ONLY: show a small fake tree when no proof is loaded
-  // Keep FALSE for PR; set TRUE locally if you need to test without backend.
+  // DEV ONLY: keep FALSE for PR
   const DEMO_TREE = false;
 
   function makeDemoNodes(): Node[] {
     const fake = (nodeId: number, name: string) =>
       ({ id: { nodeId }, name } as unknown as TreeNodeDesc);
 
-    // Important: NO "0" node is displayed. Root starts at 1.
     return [
       { kind: "real", node: fake(1, "OPEN Root"), depth: 0 },
       { kind: "real", node: fake(2, "OPEN Step 1"), depth: 0 },
       { kind: "real", node: fake(3, "OPEN Step 2"), depth: 0 },
       { kind: "real", node: fake(4, "OPEN Step 3"), depth: 0 },
 
-      // Branch point
       { kind: "real", node: fake(5, "OPEN Branching Rule"), depth: 0 },
       { kind: "virtual", label: "5.1", depth: 1 },
       { kind: "real", node: fake(6, "CLOSED Left leaf"), depth: 2 },
@@ -80,20 +76,16 @@
     ];
   }
 
-  /**
-   * Collapsed tree loader (Issue #38):
-   * - Exactly 1 child => keep SAME depth (no extra indentation).
-   * - >=2 children => create virtual branch nodes (n.1, n.2, ...) and indent those branches.
-   *
-   * Note: We do NOT display a virtual "0" node. It exists only as an internal modeling concept.
-   */
   async function loadTreeCollapsed(client: any, proof: any): Promise<Node[]> {
     const out: Node[] = [];
 
+    // IMPORTANT: use numeric nodeId in cache key
     const childrenCache = new Map<number, TreeNodeDesc[]>();
 
+    const idOf = (n: TreeNodeDesc) => Number(n.id.nodeId);
+
     async function getChildren(node: TreeNodeDesc): Promise<TreeNodeDesc[]> {
-      const id = node.id.nodeId;
+      const id = idOf(node);
       if (childrenCache.has(id)) return childrenCache.get(id)!;
       const kids = await client.proofTreeChildren(proof, node.id);
       childrenCache.set(id, kids);
@@ -101,33 +93,37 @@
     }
 
     async function emit(node: TreeNodeDesc, depth: number): Promise<void> {
-      out.push({ kind: "real", node, depth });
+      const nodeId = idOf(node);
+
+      // ✅ Never display node 0 (even if it is a real backend node)
+      if (nodeId !== 0) {
+        out.push({ kind: "real", node, depth });
+      }
 
       const kids = await getChildren(node);
 
-      // Linear chain: do NOT increase depth
+      // Linear chain => keep SAME depth
       if (kids.length === 1) {
         await emit(kids[0], depth);
         return;
       }
 
-      // Branch: create virtual nodes n.1, n.2, ...
+      // Branch => create virtual nodes n.1, n.2, ...
       if (kids.length >= 2) {
         for (let i = 0; i < kids.length; i++) {
-          const label = `${node.id.nodeId}.${i + 1}`;
+          const label = `${nodeId}.${i + 1}`;
           out.push({ kind: "virtual", label, depth: depth + 1 });
           await emit(kids[i], depth + 2);
         }
       }
-      // kids.length === 0 => leaf
     }
 
     const root = await client.proofTreeRoot(proof);
     await emit(root, 0);
+
     return out;
   }
 
-  // Rerender whenever proof tree change signal is received.
   let waker = appState.proofTreeChanged.subscribe();
 
   $effect(() => {
@@ -155,7 +151,7 @@
             onclick={() => (appState.active_node = item.node.id)}
             oncontextmenu={(e) => openCtxMenu(e, item.node)}
           >
-            {item.node.id.nodeId}: {item.node.name}
+            {Number(item.node.id.nodeId)}: {item.node.name}
           </button>
         {:else}
           <div class="virtual">{item.label}</div>
@@ -171,7 +167,7 @@
         style="left: {ctxMenu.x}px; top: {ctxMenu.y}px;"
         onclick={(e) => e.stopPropagation()}
       >
-        <div class="ctx-title">Node {ctxMenu.node?.id.nodeId}</div>
+        <div class="ctx-title">Node {Number(ctxMenu.node?.id.nodeId)}</div>
         <button class="ctx-item" disabled>Action A</button>
         <button class="ctx-item" disabled>Action B</button>
         <button class="ctx-item" disabled>Action C</button>
@@ -294,4 +290,3 @@
     opacity: 0.9;
   }
 </style>
-
