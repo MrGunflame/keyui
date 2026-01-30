@@ -157,24 +157,28 @@
     width: 100%;
     text-align: left;
 
-    color: white;
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    color: var(--c-text);
+    border: 1px solid var(--c-border);
     padding: 8px 10px;
     margin: 6px 0;
     border-radius: 8px;
 
-    background: #2b2b2b;
+    background: var(--c-node);  
     font-weight: 600;
     cursor: pointer;
   }
 
   .node:hover {
-    border-color: rgba(255, 255, 255, 0.22);
+    border-color: var(--c-border-hover);
   }
 
-  .open { background: #662222; }
-  .closed { background: #225522; }
-  .unknown { background: #333; }
+
+  .node.open{ background: var(--c-node-open);}
+  .node.closed{ 
+    background: var(--c-node-closed);
+    opacity: 0.55;
+  }
+  .node.unknown{ background: var(--c-node-unknwon);}
   
   .ctx-backdrop {
     position: fixed;
@@ -186,8 +190,8 @@
     position: fixed;
     z-index: 1000;
     min-width: 220px;
-    background: #1f1f1f;
-    border: 1px solid #444;
+    background: var(--c-panel-2);
+    border: 1px solid var(--c-border);
     border-radius: 8px;
     padding: 8px;
     box-shadow: 0 10px 25px rgba(0,0,0,0.4);
@@ -197,7 +201,7 @@
     font-size: 12px;
     opacity: 0.8;
     padding: 6px 8px;
-    border-bottom: 1px solid #333;
+    border-bottom: 1px solid var(--c-border);
     margin-bottom: 6px;
   }
 
@@ -207,43 +211,29 @@
     padding: 8px;
     border: 0;
     background: transparent;
-    color: white;
+    color: var(--c-text);
     cursor: not-allowed;
     border-radius: 6px;
     opacity: 0.7;
   }
 
   .ctx-item:hover {
-    background: #2b2b2b;
+    background:var(--c-hover-bg);
   }
 
   /* Active node = very visible */
   .node.active {
-    outline: 2px solid rgba(80, 200, 120, 0.95);
+    outline: 2px solid var(--c-active-outline);
     outline-offset: 2px;
-  }
-
-  /* open / closed / unknown */
-  .node.open {
-    background: #6a2525;
-  }
-
-  .node.closed {
-    background: #1f4f2a;
-    opacity: 0.55; /* closed nodes look processed */
-  }
-
-  .node.unknown {
-    background: #333;
   }
 
   /* leaf vs internal */
   .node.leaf {
-    border-left: 6px solid rgba(255, 255, 255, 0.16);
+    border-left: 6px solid var(--c-border);
   }
 
   .node.internal {
-    border-left: 6px solid rgba(255, 255, 255, 0.34);
+    border-left: 6px solid var(--c-border-hover);
   }
 
   /* active + closed should still be readable */

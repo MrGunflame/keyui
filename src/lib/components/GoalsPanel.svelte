@@ -32,3 +32,26 @@
   {/each}
   </ul>
 </div>
+<style>
+.panel {
+  background: var(--c-panel);
+  color: var(--c-text);
+  border: 1px solid var(--c-border);
+  border-radius: 8px;
+  padding: 10px;
+  height: 100%;
+}
+
+.panel h3 {
+  margin-top: 0;
+}
+
+.panel ul {
+  margin: 0;
+  padding-left: 18px;
+}
+
+.panel li {
+  margin: 4px 0;
+}
+</style>

@@ -47,14 +47,15 @@
   }
 
   .modal {
-    background: white;
+    background: var(--c-panel);
+    color: var(--c-text);
+    border: 1px solid var(--c-border);
     border-radius: 8px;
     padding: 1.5rem;
     min-width: 300px;
     max-width: 90%;
     position: relative;
     animation: scaleIn 0.2s ease-out;
-		color: black; 
   }
 
   .close {
@@ -65,7 +66,12 @@
     border: none;
     font-size: 1.5rem;
     cursor: pointer;
+    color: var(--c-text);
   }
+  .close:hover {
+    background: var(--c-hover-bg);
+    order-radius: 4px;
+  } 
 
   @keyframes scaleIn {
     from {

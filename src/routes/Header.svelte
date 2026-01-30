@@ -94,7 +94,7 @@
 }
 
 .header button:hover {
-    background-color: #555;
+    background-color: var(--c-hover-bg);
     border-radius: 0;
 }
 
@@ -125,7 +125,7 @@
     padding: 4px 10px;
     background-color: transparent;
     border: none;
-    color: white;
+    color: var(--c-text);
     cursor: pointer;
 }
 
@@ -133,10 +133,9 @@
     display: flex;
     align-items: flex-start;
     flex-direction: column;
-    /* No padding so that it aligns with the top menu button. */
     padding: 0;
-    background-color: #333;
-    border: 1px solid #444;
+    background-color: var(--c-panel-2);
+    border: 1px solid var(--c-border);
 }
 
 .submenu button {
@@ -144,7 +143,7 @@
 }
 
 .submenu button:hover {
-    background-color: #555;
+    background-color: var(--c-hover-bg);
 }
 
 </style>

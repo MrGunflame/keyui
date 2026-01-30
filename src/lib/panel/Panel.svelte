@@ -8,9 +8,11 @@
 
 <style>
     .panel {
-        background: #252525;
+        background:var(--c-panel);
         padding: 10px;
         border-radius: 6px;
         height: 100%;
+        color: var(--c-text);
+        border: 1px solid var(--c-border);
     }
 </style>
