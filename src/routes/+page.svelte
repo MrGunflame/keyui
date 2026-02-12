@@ -62,16 +62,17 @@ fn main() {
   }
 </script>
 
-<main class="container">
-  <Header {appState} onError={(error: any) => (errorState = error)} />
+<main class="main">
+  <div class="header">
+    <Header {appState} onError={(error: any) => (errorState = error)} />
 
-  <div class="actions">
-    <button class="play" on:click={autoProof} disabled={!appState.proof}>
-      ▶ Auto Proof
-    </button>
+    <div class="actions">
+      <button class="play" on:click={autoProof} disabled={!appState.proof}>
+        ▶ Auto Proof
+      </button>
+    </div>
   </div>
 
-  <!-- <Api /> -->
   {#if errorState}
     <Modal open={true} on:close={() => (errorState = null)}>
       <h2>Error</h2>
@@ -81,25 +82,61 @@ fn main() {
     </Modal>
   {/if}
 
-  <div class="layout">
-    <Panel>
-      <ProofTree {appState} />
-    </Panel>
-    <Panel>
-      <Sequent {appState} />
-    </Panel>
-    <Panel>
-      <GoalsPanel {appState} />
-    </Panel>
+  <div class="main-section">
+    <div class="flex-1">
+      <Panel>
+        <ProofTree {appState} />
+      </Panel>
+    </div>
+    <div class="flex-10">
+      <Panel>
+        <Sequent {appState} />
+      </Panel>
+    </div>
+    <div class="flex-1">
+      <Panel>
+        <GoalsPanel {appState} />
+      </Panel>
+    </div>
   </div>
 
+  <!--
   <section class="code-section">
     <h2>Rust example</h2>
     <CodeBlock language="rust" code={rustExample} />
   </section>
+  -->
 </main>
 
 <style>
+  .main {
+    width: 100vw;
+    height: 100vh;
+    display: flex;
+    flex-flow: column;
+
+    background: #1e1e1e;
+    color: white;
+  }
+
+  .header {
+    flex-grow: 0;
+    flex-shrink: 1;
+    flex-basis: auto;
+  }
+
+  .main-section {
+    flex-grow: 1;
+    flex-shrink: 1;
+    flex-basis: auto;
+
+    display: flex;
+    
+    gap: 10px;
+    margin: 10px;
+    padding: 10px;
+  }
+  
   .actions {
     padding: 10px;
     display: flex;
@@ -112,6 +149,7 @@ fn main() {
     border: none;
     cursor: pointer;
     border-radius: 6px;
+    background-color: white;
   }
 
   .play:disabled {
@@ -119,14 +157,12 @@ fn main() {
     cursor: not-allowed;
   }
 
-  .layout {
-    display: grid;
-    grid-template-columns: 250px 1fr 250px;
-    gap: 10px;
-    height: 100vh;
-    padding: 10px;
-    background: #1e1e1e;
-    color: white;
+  .flex-1 {
+    flex-grow: 1;
+  }
+
+  .flex-10 {
+    flex-grow: 10;
   }
 </style>
 
