@@ -9,6 +9,8 @@
   };
 
   let nodes = $state<Node[]>([]);
+  let searchQuery = $state("");
+  let collapsedNodes = $state<Set<string>>(new Set());
   
   type CtxMenuState = {
     open: boolean;
@@ -55,6 +57,76 @@
   function isActive(node: TreeNodeDesc) {
     return appState.active_node?.nodeId == node.id.nodeId;
   }
+
+  function toggleCollapse(nodeId: string) {
+    if (collapsedNodes.has(nodeId)) {
+      collapsedNodes.delete(nodeId);
+    } else {
+      collapsedNodes.add(nodeId);
+    }
+    collapsedNodes = new Set(collapsedNodes); 
+  }
+
+  function isCollapsed(nodeId: string) {
+    return collapsedNodes.has(nodeId);
+  }
+
+  function isHiddenByCollapse(index: number): boolean {
+ const currentNode = nodes[index];
+  if (!currentNode) return false;
+
+  
+  for (let i = index - 1; i >= 0; i--) {
+    const ancestor = nodes[i];
+    
+    
+    if (ancestor.depth < currentNode.depth) {
+      const ancestorNodeId = ancestor.node.id.nodeId;
+      if (collapsedNodes.has(ancestorNodeId)) {
+        return true;
+      }
+    }
+  }
+  
+  return false;
+  }
+
+  function matchesSearch(node: TreeNodeDesc): boolean {
+    if (!searchQuery.trim()) return true;
+    
+    const query = searchQuery.toLowerCase();
+    const nodeName = node.name.toLowerCase();
+    const nodeId = node.id.nodeId.toString();
+    
+    return nodeName.includes(query) || nodeId.includes(query);
+  }
+
+  function hasMatchingDescendant(index: number): boolean {
+    if (!searchQuery.trim()) return false;
+    
+    const currentDepth = nodes[index]?.depth ?? 0;
+    
+    for (let i = index + 1; i < nodes.length; i++) {
+      if (nodes[i].depth <= currentDepth) break;
+      if (matchesSearch(nodes[i].node)) return true;
+    }
+    return false;
+  }
+
+  function shouldShowNode(index: number): boolean {
+    const node = nodes[index];
+    if (!node) return false;
+
+    
+    if (isHiddenByCollapse(index)) return false;
+
+    
+    if (!searchQuery.trim()) return true;
+
+    
+    return matchesSearch(node.node) || hasMatchingDescendant(index);
+  }
+
 
   // DEV ONLY: show a small fake tree when no proof is loaded (so we can work on UI)
   const DEMO_TREE = false;
@@ -116,20 +188,49 @@
 
 <div class="proof-tree-container">
   <h3>Proof Tree</h3>
+
+  <div class="search-container">
+    <input
+      type="text"
+      class="search-input"
+      placeholder="Suche nach Name oder ID..."
+      bind:value={searchQuery}
+    />
+    {#if searchQuery}
+      <button class="clear-btn" onclick={() => searchQuery = ""}>✕</button>
+    {/if}
+  </div>
+
   <ul class="node-list">
     {#each nodes as node, index}
-      <li style="margin-left: {node.depth * 14}px;">
-        <button
-          class="node {statusFromName(node.node.name)} {isActive(node.node) ? "active" : ""} {isLeaf(index) ? "leaf" : "internal"}"
-          onclick={() => (appState.active_node = node.node.id)}
-        oncontextmenu={(e)=>openCtxMenu(e,node.node)}
-        >
-          {node.node.id.nodeId}: {node.node.name}
-        </button>
-      </li>
+    {#if shouldShowNode(index)}
+        <li style="margin-left: {node.depth * 14}px;">
+          <button
+            class="node {statusFromName(node.node.name)} {isActive(node.node) ? 'active' : ''} {isLeaf(index) ? 'leaf' : 'internal'}"
+            onclick={() => (appState.active_node = node.node.id)}
+            oncontextmenu={(e) => openCtxMenu(e, node.node)}
+          >
+          {#if !isLeaf(index)}
+              <span 
+                class="collapse-icon"
+                onclick={(e) => {
+                  e.stopPropagation();
+                  toggleCollapse(node.node.id.nodeId);
+                }}
+              >
+                {isCollapsed(node.node.id.nodeId) ? '▶' : '▼'}
+              </span>
+            {/if}
+            <span class="node-content">
+              {node.node.id.nodeId}: {node.node.name}
+            </span>
+          </button>
+        </li>
+      {/if}
     {/each}
   </ul>
-  {#if ctxMenu.open}
+
+ {#if ctxMenu.open}
     <div class="ctx-backdrop" onclick={closeCtxMenu}>
       <div
         class="ctx-menu"
@@ -145,6 +246,7 @@
 </div>
 
 <style>
+<<<<<<< Updated upstream
     .proof-tree-container {
     display: flex;
     flex-direction: column;
@@ -155,6 +257,56 @@
     margin: 0 0 10px 0;
     flex-shrink: 0;
   }
+=======
+  .proof-tree-container {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    padding: 0 10px;
+  }
+  .search-container {
+    position: relative;
+    margin: 10px 0;
+  }
+  .search-input {
+    width: 100%;
+    padding: 10px 35px 10px 12px;
+    background: #2b2b2b;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 8px;
+    color: white;
+    font-size: 14px;
+    box-sizing: border-box;
+  }
+  .search-input:focus {
+    outline: none;
+    border-color: rgba(80, 200, 120, 0.5);
+  }
+
+  .search-input::placeholder {
+    color: rgba(255, 255, 255, 0.4);
+  }
+
+  .clear-btn {
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: transparent;
+    border: none;
+    color: rgba(255, 255, 255, 0.5);
+    cursor: pointer;
+    padding: 4px 8px;
+    font-size: 16px;
+  }
+
+  .clear-btn:hover {
+    color: white;
+  }
+
+
+
+>>>>>>> Stashed changes
   .node-list {
     flex: 1;
     overflow-y: auto;
@@ -167,8 +319,15 @@
   .node {
     width: 100%;
     text-align: left;
+<<<<<<< Updated upstream
     word-wrap: break-word;
     white-space: normal;
+=======
+    display: flex;
+    align-items: center;
+    gap: 8px;
+
+>>>>>>> Stashed changes
 
     color: white;
     border: 1px solid rgba(255, 255, 255, 0.08);
@@ -183,6 +342,25 @@
 
   .node:hover {
     border-color: rgba(255, 255, 255, 0.22);
+  }
+
+  .collapse-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+    font-size: 10px;
+    opacity: 0.7;
+    transition: opacity 0.2s;
+  }
+
+  .collapse-icon:hover {
+    opacity: 1;
+  }
+
+   .node-content {
+    flex: 1;
   }
 
   .open { background: #662222; }
