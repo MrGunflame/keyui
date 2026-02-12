@@ -21,4 +21,3 @@ from which you start `keyui`). When using `npm run tauri dev` this is usually `s
 
 You can compile the `api.jar` file from [this branch]([https://github.com/MrGunflame/key/tree/rusty-api](https://github.com/MrGunflame/key/commits/api-branchoff-plus-rusty-key/)).
 The jar can be found in `keyext.api/build/libs`.
-A precompiled version is available [here](https://drive.google.com/file/d/1ZdRS3XJyb-1sQrr05KB9VDfjvA_JEMg1/view?usp=drive_link).
