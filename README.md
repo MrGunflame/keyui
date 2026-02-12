@@ -19,5 +19,5 @@ Running `keyui` requires installation of the following prerequisites:
 Compile the API and place it as `api.jar` in the working directory (the directory
 from which you start `keyui`). When using `npm run tauri dev` this is usually `src-tauri`.
 
-You can compile the `api.jar` file from [this branch](https://github.com/MrGunflame/key/commits/api-branchoff-plus-rusty-key/).
+You can compile the `api.jar` file from [this branch](https://github.com/MrGunflame/key/tree/api-branchoff-plus-rusty-key).
 The jar can be found in `keyext.api/build/libs`.
