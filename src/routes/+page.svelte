@@ -135,6 +135,9 @@ fn main() {
     gap: 10px;
     margin: 10px;
     padding: 10px;
+
+    min-width: 0;
+    min-height: 0;
   }
   
   .actions {
