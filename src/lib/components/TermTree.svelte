@@ -169,7 +169,7 @@
         border-radius: 8px;
         box-shadow: 0 10px 25px rgba(0,0,0,0.4);
         z-index: 1000;
-    }
+   }
 
     .ctx-menu ul {
         list-style-type: none;
