@@ -246,7 +246,6 @@
 </div>
 
 <style>
-<<<<<<< Updated upstream
     .proof-tree-container {
     display: flex;
     flex-direction: column;
@@ -257,7 +256,6 @@
     margin: 0 0 10px 0;
     flex-shrink: 0;
   }
-=======
   .proof-tree-container {
     height: 100%;
     display: flex;
@@ -306,7 +304,6 @@
 
 
 
->>>>>>> Stashed changes
   .node-list {
     flex: 1;
     overflow-y: auto;
@@ -319,15 +316,12 @@
   .node {
     width: 100%;
     text-align: left;
-<<<<<<< Updated upstream
     word-wrap: break-word;
     white-space: normal;
-=======
     display: flex;
     align-items: center;
     gap: 8px;
 
->>>>>>> Stashed changes
 
     color: white;
     border: 1px solid rgba(255, 255, 255, 0.08);
