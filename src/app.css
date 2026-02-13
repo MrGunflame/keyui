@@ -17,6 +17,11 @@
   --c-active-outline: rgba(80, 200, 120, 0.95);
   --c-hover-bg: #2b2b2b;
   --c-span-hover: gray;
+
+  --c-main-background: #1e1e1e;
+
+  --c-main: black;
+  --c-main-inverse: white;
 }
 
 :root[data-theme="light"] {
@@ -38,6 +43,11 @@
   --c-active-outline: rgba(34, 139, 34, 0.8);
   --c-hover-bg: #ededed;
   --c-span-hover: #cfcfcf;
+
+  --c-main-background: #ffffff;
+
+  --c-main: white;
+  --c-main-inverse: black;
 }
 
 body {

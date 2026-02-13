@@ -149,7 +149,6 @@
 
 <style>
     .tree {
-        background: #252525;
         padding: 10px;
         border-radius: 6px;
         height: 100%;
@@ -162,12 +161,6 @@
         display: inline;
         white-space: pre-wrap;
         word-break: break-word;
-    }
-    .display {
-        margin-top: 8px;
-        background: #333;
-        padding: 6px;
-        border-radius: 4px;
     }
 
     .span-hover {
