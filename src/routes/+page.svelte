@@ -10,7 +10,7 @@
   import type { ProofId, NodeId } from './api';
   import Modal from './Modal.svelte';
 
-  import { ReactiveSignal } from '$lib/reactive.ts';
+  import { ReactiveSignal } from '$lib/reactive';
   import { writable, type Writable } from "svelte/store";
 
   type AppState = {
@@ -28,6 +28,7 @@
     proof: null,
     active_node: null,
     proofTreeChanged: new ReactiveSignal(),
+    
   });
 
   let errorState: string | null = $state(null);
@@ -61,16 +62,17 @@ fn main() {
   }
 </script>
 
-<main class="container">
-  <Header {appState} onError={(error) => (errorState = error)} />
+<main class="main">
+  <div class="header">
+    <Header {appState} onError={(error: any) => (errorState = error)} />
 
-  <div class="actions">
-    <button class="play" on:click={autoProof} disabled={!appState.proof}>
-      ▶ Auto Proof
-    </button>
+    <div class="actions">
+      <button class="play" on:click={autoProof} disabled={!appState.proof}>
+        ▶ Auto Proof
+      </button>
+    </div>
   </div>
 
-  <!-- <Api /> -->
   {#if errorState}
     <Modal open={true} on:close={() => (errorState = null)}>
       <h2>Error</h2>
@@ -80,25 +82,64 @@ fn main() {
     </Modal>
   {/if}
 
-  <div class="layout">
-    <Panel>
-      <ProofTree {appState} />
-    </Panel>
-    <Panel>
-      <Sequent {appState} />
-    </Panel>
-    <Panel>
-      <GoalsPanel {appState} />
-    </Panel>
+  <div class="main-section">
+    <div class="flex-1">
+      <Panel>
+        <ProofTree {appState} />
+      </Panel>
+    </div>
+    <div class="flex-10">
+      <Panel>
+        <Sequent {appState} />
+      </Panel>
+    </div>
+    <div class="flex-1">
+      <Panel>
+        <GoalsPanel {appState} />
+      </Panel>
+    </div>
   </div>
 
+  <!--
   <section class="code-section">
     <h2>Rust example</h2>
     <CodeBlock language="rust" code={rustExample} />
   </section>
+  -->
 </main>
 
 <style>
+  .main {
+    width: 100vw;
+    height: 100vh;
+    display: flex;
+    flex-flow: column;
+
+    background: #1e1e1e;
+    color: white;
+  }
+
+  .header {
+    flex-grow: 0;
+    flex-shrink: 1;
+    flex-basis: auto;
+  }
+
+  .main-section {
+    flex-grow: 1;
+    flex-shrink: 1;
+    flex-basis: auto;
+
+    display: flex;
+    
+    gap: 10px;
+    margin: 10px;
+    padding: 10px;
+
+    min-width: 0;
+    min-height: 0;
+  }
+  
   .actions {
     padding: 10px;
     display: flex;
@@ -111,6 +152,7 @@ fn main() {
     border: none;
     cursor: pointer;
     border-radius: 6px;
+    background-color: white;
   }
 
   .play:disabled {
@@ -118,14 +160,12 @@ fn main() {
     cursor: not-allowed;
   }
 
-  .layout {
-    display: grid;
-    grid-template-columns: 250px 1fr 250px;
-    gap: 10px;
-    height: 100vh;
-    padding: 10px;
-    background: #1e1e1e;
-    color: white;
+  .flex-1 {
+    flex-grow: 1;
+  }
+
+  .flex-10 {
+    flex-grow: 10;
   }
 </style>
 

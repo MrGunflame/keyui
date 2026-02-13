@@ -86,6 +86,7 @@ export class Client {
     }
 }
 
+//Custom error class for API errors
 class ApiError {
     code: number = 0;
     data: string = "";
