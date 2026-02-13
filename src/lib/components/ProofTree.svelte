@@ -8,6 +8,8 @@
     | { kind: "virtual"; label: string; depth: number };
 
   let nodes = $state<Node[]>([]);
+  let searchQuery = $state("");
+  let collapsedNodes = $state<Set<string>>(new Set());
 
   //State for the context menu
   type CtxMenuState = {
@@ -37,8 +39,8 @@
   }
 
   //Fetches the sequent for a given node using the goal/print API
-  async function fetchAppliedOn(nodeId:any) {
-    const options={
+  async function fetchAppliedOn(nodeId: any) {
+    const options = {
       unicode: false,
       width: 120,
       indentation: 0,
@@ -47,8 +49,8 @@
     };
 
     //goalPrint takes a NodeId
-    const res= await appState.client.goalPrint(nodeId,options);
-    return res.result as string; 
+    const res = await appState.client.goalPrint(nodeId, options);
+    return res.result as string;
   }
 
   //Opens the context menu when user right-clicks a node
@@ -77,22 +79,23 @@
       node,
       appliedOn: null,
       loading: true,
-      error:null,
+      error: null,
     };
 
     //Fetch the sequent in the background
-    fetchAppliedOn(node.id).then(text=> {
-      if(!ctxMenu.open || ctxMenu.node?.id.nodeId !== node.id.nodeId) return;
+    fetchAppliedOn(node.id)
+      .then((text) => {
+        if (!ctxMenu.open || ctxMenu.node?.id.nodeId !== node.id.nodeId) return;
 
-      ctxMenu.appliedOn = text;
-      ctxMenu.loading = false;
-    }).catch(err => {
-      if (!ctxMenu.open || ctxMenu.node?.id.nodeId !==node.id.nodeId) return;
+        ctxMenu.appliedOn = text;
+        ctxMenu.loading = false;
+      })
+      .catch((err) => {
+        if (!ctxMenu.open || ctxMenu.node?.id.nodeId !== node.id.nodeId) return;
 
-      ctxMenu.error = err?.toString?.() ?? "Unknown error";
-      ctxMenu.loading = false;
-    });
-
+        ctxMenu.error = err?.toString?.() ?? "Unknown error";
+        ctxMenu.loading = false;
+      });
   }
 
   function closeCtxMenu() {
@@ -116,12 +119,86 @@
     return Number(appState.active_node?.nodeId) === Number(node.id.nodeId);
   }
 
+  function toggleCollapse(nodeId: string) {
+    if (collapsedNodes.has(nodeId)) {
+      collapsedNodes.delete(nodeId);
+    } else {
+      collapsedNodes.add(nodeId);
+    }
+    collapsedNodes = new Set(collapsedNodes);
+  }
+
+  function isCollapsed(nodeId: string) {
+    return collapsedNodes.has(nodeId);
+  }
+
+  function isHiddenByCollapse(index: number): boolean {
+    const currentNode = nodes[index];
+    if (!currentNode) return false;
+
+    for (let i = index - 1; i >= 0; i--) {
+      const ancestor = nodes[i];
+
+      if (ancestor.depth < currentNode.depth) {
+        if (ancestor.kind === "virtual") {
+          continue;
+        }
+
+        const ancestorNodeId = ancestor.node.id.nodeId;
+        if (collapsedNodes.has(ancestorNodeId)) {
+          return true;
+        }
+      }
+    }
+
+    return false;
+  }
+
+  function matchesSearch(node: TreeNodeDesc): boolean {
+    if (!searchQuery.trim()) return true;
+
+    const query = searchQuery.toLowerCase();
+    const nodeName = node.name.toLowerCase();
+    const nodeId = node.id.nodeId.toString();
+
+    return nodeName.includes(query) || nodeId.includes(query);
+  }
+
+  function hasMatchingDescendant(index: number): boolean {
+    if (!searchQuery.trim()) return false;
+
+    const currentDepth = nodes[index]?.depth ?? 0;
+
+    for (let i = index + 1; i < nodes.length; i++) {
+      if (nodes[i].depth <= currentDepth) break;
+
+      if (nodes[i].kind === "virtual") return true;
+
+      if (matchesSearch(nodes[i].node)) return true;
+    }
+    return false;
+  }
+
+  function shouldShowNode(index: number): boolean {
+    const node = nodes[index];
+    if (!node) return false;
+
+    if (isHiddenByCollapse(index)) return false;
+
+    if (!searchQuery.trim()) return true;
+
+    if (node.kind === "virtual") return true;
+
+    return matchesSearch(node.node) || hasMatchingDescendant(index);
+  }
+
+  // DEV ONLY: show a small fake tree when no proof is loaded (so we can work on UI)
   // DEV ONLY: keep FALSE for PR
   const DEMO_TREE = false;
 
   function makeDemoNodes(): Node[] {
     const fake = (nodeId: number, name: string) =>
-      ({ id: { nodeId }, name } as unknown as TreeNodeDesc);
+      ({ id: { nodeId }, name }) as unknown as TreeNodeDesc;
 
     return [
       { kind: "real", node: fake(1, "OPEN Root"), depth: 0 },
@@ -200,65 +277,91 @@
 
 <div class="proof-tree-container">
   <h3>Proof Tree</h3>
+
+  <div class="search-container">
+    <input
+      type="text"
+      class="search-input"
+      placeholder="Suche nach Name oder ID..."
+      bind:value={searchQuery}
+    />
+    {#if searchQuery}
+      <button class="clear-btn" onclick={() => (searchQuery = "")}>✕</button>
+    {/if}
+  </div>
+
   <ul class="node-list">
     {#each nodes as item, index}
-      <li style="margin-left: {item.depth * 14}px;">
-        {#if item.kind === "real"}
-          <button
-            class="node {statusFromName(item.node.name)} {isActive(item.node) ? "active" : ""} {isLeaf(index) ? "leaf" : "internal"}"
-            onclick={() => (appState.active_node = item.node.id)}
-            oncontextmenu={(e) => openCtxMenu(e, item.node)}
-          >
-            {Number(item.node.id.nodeId)}: {item.node.name}
-          </button>
-        {:else}
-          <div class="virtual">{item.label}</div>
-        {/if}
-      </li>
+      {#if shouldShowNode(index)}
+        <li style="margin-left: {item.depth * 14}px;">
+          {#if item.kind === "real"}
+            <button
+              class="node {statusFromName(item.node.name)} {isActive(item.node)
+                ? 'active'
+                : ''} {isLeaf(index) ? 'leaf' : 'internal'}"
+              onclick={() => (appState.active_node = item.node.id)}
+              oncontextmenu={(e) => openCtxMenu(e, item.node)}
+            >
+              {#if !isLeaf(index)}
+                <span
+                  class="collapse-icon"
+                  onclick={(e) => {
+                    e.stopPropagation();
+                    toggleCollapse(item.node.id.nodeId);
+                  }}
+                >
+                  {isCollapsed(item.node.id.nodeId) ? "▶" : "▼"}
+                </span>
+              {/if}
+
+              {Number(item.node.id.nodeId)}: {item.node.name}
+            </button>
+          {:else}
+            <div class="virtual">{item.label}</div>
+          {/if}
+        </li>
+      {/if}
     {/each}
   </ul>
 
   {#if ctxMenu.open}
-  <div class="ctx-backdrop" onclick={closeCtxMenu}>
-    <div
-      class="ctx-menu"
-      style="left:{ctxMenu.x}px; top:{ctxMenu.y}px;"
-      onclick={(e) => e.stopPropagation()}
-    >
-      {#if ctxMenu.node?.name?.toLowerCase() === "closed goal"}
-        
-        <div class="ctx-simple">A closed goal</div>
-      {:else}
-      
-        <div class="ctx-title">Taclet info</div>
+    <div class="ctx-backdrop" onclick={closeCtxMenu}>
+      <div
+        class="ctx-menu"
+        style="left:{ctxMenu.x}px; top:{ctxMenu.y}px;"
+        onclick={(e) => e.stopPropagation()}
+      >
+        {#if ctxMenu.node?.name?.toLowerCase() === "closed goal"}
+          <div class="ctx-simple">A closed goal</div>
+        {:else}
+          <div class="ctx-title">Taclet info</div>
 
-        <div class="ctx-content">
-          <div class="ctx-row">
-            <div class="ctx-label">Rule</div>
-            <div class="ctx-value">{ctxMenu.node?.name ?? "-"}</div>
+          <div class="ctx-content">
+            <div class="ctx-row">
+              <div class="ctx-label">Rule</div>
+              <div class="ctx-value">{ctxMenu.node?.name ?? "-"}</div>
+            </div>
+
+            <div class="ctx-sep"></div>
+
+            <div class="ctx-label">Applied on</div>
+
+            {#if ctxMenu.loading}
+              <div class="ctx-mono loading">Loading…</div>
+            {:else if ctxMenu.error}
+              <div class="ctx-mono error">{ctxMenu.error}</div>
+            {:else}
+              <div class="ctx-mono">{ctxMenu.appliedOn ?? "-"}</div>
+            {/if}
           </div>
-
-          <div class="ctx-sep"></div>
-
-          <div class="ctx-label">Applied on</div>
-
-          {#if ctxMenu.loading}
-            <div class="ctx-mono loading">Loading…</div>
-          {:else if ctxMenu.error}
-            <div class="ctx-mono error">{ctxMenu.error}</div>
-          {:else}
-            <div class="ctx-mono">{ctxMenu.appliedOn ?? "-"}</div>
-          {/if}
-        </div>
-      {/if}
+        {/if}
+      </div>
     </div>
-  </div>
-{/if}
-
+  {/if}
 </div>
 
 <style>
-    .proof-tree-container {
+  .proof-tree-container {
     display: flex;
     flex-direction: column;
     height: 100%;
@@ -268,6 +371,52 @@
     margin: 0 0 10px 0;
     flex-shrink: 0;
   }
+  .proof-tree-container {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    padding: 0 10px;
+  }
+  .search-container {
+    position: relative;
+    margin: 10px 0;
+  }
+  .search-input {
+    width: 100%;
+    padding: 10px 35px 10px 12px;
+    background: #2b2b2b;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 8px;
+    color: white;
+    font-size: 14px;
+    box-sizing: border-box;
+  }
+  .search-input:focus {
+    outline: none;
+    border-color: rgba(80, 200, 120, 0.5);
+  }
+
+  .search-input::placeholder {
+    color: rgba(255, 255, 255, 0.4);
+  }
+
+  .clear-btn {
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: transparent;
+    border: none;
+    color: rgba(255, 255, 255, 0.5);
+    cursor: pointer;
+    padding: 4px 8px;
+    font-size: 16px;
+  }
+
+  .clear-btn:hover {
+    color: white;
+  }
+
   .node-list {
     flex: 1;
     overflow-y: auto;
@@ -282,6 +431,9 @@
     text-align: left;
     word-wrap: break-word;
     white-space: normal;
+    display: flex;
+    align-items: center;
+    gap: 8px;
 
     color: white;
     border: 1px solid rgba(255, 255, 255, 0.08);
@@ -292,7 +444,9 @@
     background: #2b2b2b;
     font-weight: 600;
     cursor: pointer;
-    transition: border-color 120ms ease, transform 120ms ease;
+    transition:
+      border-color 120ms ease,
+      transform 120ms ease;
   }
 
   .node:hover {
@@ -305,15 +459,40 @@
     padding: 6px 10px;
     margin: 6px 0;
     border-radius: 8px;
-    border: 1px dashed rgba(255, 255, 255, 0.20);
+    border: 1px dashed rgba(255, 255, 255, 0.2);
     color: rgba(255, 255, 255, 0.8);
     background: rgba(255, 255, 255, 0.04);
     font-weight: 600;
   }
 
-  .open { background: #662222; }
-  .closed { background: #225522; }
-  .unknown { background: #333; }
+  .collapse-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+    font-size: 10px;
+    opacity: 0.7;
+    transition: opacity 0.2s;
+  }
+
+  .collapse-icon:hover {
+    opacity: 1;
+  }
+
+  .node-content {
+    flex: 1;
+  }
+
+  .open {
+    background: #662222;
+  }
+  .closed {
+    background: #225522;
+  }
+  .unknown {
+    background: #333;
+  }
 
   .ctx-backdrop {
     position: fixed;
@@ -321,25 +500,25 @@
     z-index: 999;
   }
   .ctx-simple {
-  padding: 10px 12px;
-  font-size: 13px;
-  font-weight: 600;
-  opacity: 0.95;
-  white-space: nowrap;
-}
+    padding: 10px 12px;
+    font-size: 13px;
+    font-weight: 600;
+    opacity: 0.95;
+    white-space: nowrap;
+  }
 
   .ctx-menu {
     position: fixed;
     z-index: 1000;
     min-width: 260px;
     max-width: 420px;
-    background:rgba(20, 20, 20, 0.92);
-    border: 1px solid rgba(255, 255, 255, 0.10);
+    background: rgba(20, 20, 20, 0.92);
+    border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 12px;
     padding: 10px 12px;
-    box-shadow: 0 18px 45px rgba(0,0,0,0.55);
+    box-shadow: 0 18px 45px rgba(0, 0, 0, 0.55);
     backdrop-filter: blur(10px);
-    transform: translate(8px,8px);
+    transform: translate(8px, 8px);
   }
 
   .ctx-title {
@@ -348,60 +527,61 @@
     letter-spacing: 0.2px;
     opacity: 0.9;
     padding: 6px 2px 10px 2px;
-    border-bottom: 1px solid rgba(255,255,255,0.08);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
     margin-bottom: 10px;
   }
 
   .ctx-content {
-  display: grid;
-  gap: 10px;
-}
+    display: grid;
+    gap: 10px;
+  }
 
-.ctx-row {
-  display: grid;
-  grid-template-columns: 92px 1fr;
-  gap: 10px;
-  align-items: baseline;
-}
+  .ctx-row {
+    display: grid;
+    grid-template-columns: 92px 1fr;
+    gap: 10px;
+    align-items: baseline;
+  }
 
-.ctx-label {
-  font-size: 12px;
-  opacity: 0.7;
-}
+  .ctx-label {
+    font-size: 12px;
+    opacity: 0.7;
+  }
 
-.ctx-value {
-  font-size: 13px;
-  font-weight: 650;
-}
+  .ctx-value {
+    font-size: 13px;
+    font-weight: 650;
+  }
 
-.ctx-sep {
-  height: 1px;
-  background: rgba(255,255,255,0.08);
-  margin: 2px 0;
-}
+  .ctx-sep {
+    height: 1px;
+    background: rgba(255, 255, 255, 0.08);
+    margin: 2px 0;
+  }
 
-.ctx-mono {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-  font-size: 12px;
-  line-height: 1.35;
+  .ctx-mono {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+      "Liberation Mono", "Courier New", monospace;
+    font-size: 12px;
+    line-height: 1.35;
 
-  white-space: pre-wrap;
-  word-break: break-word;
+    white-space: pre-wrap;
+    word-break: break-word;
 
-  padding: 8px 10px;
-  border-radius: 10px;
-  background: rgba(255,255,255,0.06);
-  border: 1px solid rgba(255,255,255,0.08);
-}
+    padding: 8px 10px;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+  }
 
-.ctx-mono.loading {
-  opacity: 0.75;
-}
+  .ctx-mono.loading {
+    opacity: 0.75;
+  }
 
-.ctx-mono.error {
-  border-color: rgba(255, 120, 120, 0.35);
-  background: rgba(255, 120, 120, 0.10);
-}
+  .ctx-mono.error {
+    border-color: rgba(255, 120, 120, 0.35);
+    background: rgba(255, 120, 120, 0.1);
+  }
 
   .node.active {
     outline: 2px solid rgba(80, 200, 120, 0.95);

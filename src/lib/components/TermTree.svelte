@@ -140,6 +140,15 @@
         padding: 10px;
         border-radius: 6px;
         height: 100%;
+        overflow-x: hidden;
+        overflow-y: auto;
+        word-wrap: break-word;
+        overflow-wrap: break-word;
+    }
+    .tree span {
+        display: inline;
+        white-space: pre-wrap; 
+        word-break: break-word; 
     }
     .display {
         margin-top: 8px;
@@ -156,7 +165,11 @@
         position: absolute;
         background: #1f1f1f;
         padding: 5px;
-    }
+        border: 1px solid #444;
+        border-radius: 8px;
+        box-shadow: 0 10px 25px rgba(0,0,0,0.4);
+        z-index: 1000;
+   }
 
     .ctx-menu ul {
         list-style-type: none;
