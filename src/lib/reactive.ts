@@ -1,7 +1,7 @@
 import { writable, type Writable } from "svelte/store";
 
 // A many-to-many reactive signal.
-// 
+//
 // Call `subscribe` to receive an object that will track this signal.
 // Call `notify` to signal all active tracker.
 //
@@ -13,7 +13,7 @@ import { writable, type Writable } from "svelte/store";
 //     // Track the signal in this effect, causing it to rerun whenever notify is called.
 //     $waker;
 // })
-// 
+//
 // function onevent() {
 //     signal.notify();
 // }
@@ -31,6 +31,6 @@ export class ReactiveSignal {
 
     notify() {
         console.debug("ReactiveSignal::notify");
-        this.store.update(n => n + 1);
+        this.store.update((n) => n + 1);
     }
 }

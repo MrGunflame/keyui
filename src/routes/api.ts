@@ -1,10 +1,10 @@
-import { invoke } from '@tauri-apps/api/core';
+import { invoke } from "@tauri-apps/api/core";
 
 export class Client {
     async send(method: string, payload: any): Promise<any> {
         let resp: any = await invoke("send_msg", {
-            "method": method,
-            "params": payload,
+            method: method,
+            params: payload,
         });
 
         console.log(resp);
@@ -25,25 +25,24 @@ export class Client {
         return await this.send("meta/version", null);
     }
 
-
     public async load(params: LoadParams): Promise<ProofId> {
         let framed: any = {
-            "problemFile": {
-                "uri": params.problemFile,
+            problemFile: {
+                uri: params.problemFile,
             },
-            "$class": "org.keyproject.key.api.data.LoadParams",
+            $class: "org.keyproject.key.api.data.LoadParams",
         };
 
         if (params.bootClassPath) {
-            framed.bootClassPath = { "uri": params.bootClassPath };
+            framed.bootClassPath = { uri: params.bootClassPath };
         }
 
         if (params.classPath) {
-            framed.classPath = params.classPath.map((x) => ({ "uri": x }));
+            framed.classPath = params.classPath.map((x) => ({ uri: x }));
         }
 
         if (params.includes) {
-            framed.includes = params.includes.map((x) => ({ "uri": x }));
+            framed.includes = params.includes.map((x) => ({ uri: x }));
         }
 
         return await this.send("loading/load", framed);
@@ -57,31 +56,49 @@ export class Client {
         return await this.send("proofTree/root", proof);
     }
 
-    public async proofTreeChildren(proof: ProofId, nodeId: NodeId): Promise<TreeNodeDesc[]> {
+    public async proofTreeChildren(
+        proof: ProofId,
+        nodeId: NodeId,
+    ): Promise<TreeNodeDesc[]> {
         let tree_node = {
-            "id": nodeId.nodeId,
-            "$class": "org.keyproject.key.api.data.KeyIdentifications$TreeNodeId",
+            id: nodeId.nodeId,
+            $class: "org.keyproject.key.api.data.KeyIdentifications$TreeNodeId",
         };
 
         return await this.send("proofTree/children", [proof, tree_node]);
     }
 
-    public async goalPrint(id: NodeId, options: PrintOptions): Promise<NodeTextDesc> {
+    public async goalPrint(
+        id: NodeId,
+        options: PrintOptions,
+    ): Promise<NodeTextDesc> {
         return await this.send("goal/print", [id, options]);
     }
 
-    public async proofGoals(proof: ProofId, onlyOpened: boolean, onlyEnabled: boolean): Promise<NodeDesc> {
+    public async proofGoals(
+        proof: ProofId,
+        onlyOpened: boolean,
+        onlyEnabled: boolean,
+    ): Promise<NodeDesc> {
         return await this.send("proof/goals", [proof, onlyOpened, onlyEnabled]);
     }
 
-    public async proofAuto(proof: ProofId, options: StrategyOptions): Promise<ProofStatus> {
+    public async proofAuto(
+        proof: ProofId,
+        options: StrategyOptions,
+    ): Promise<ProofStatus> {
         let options_framed: any = options;
         options_framed.$class = "org.keyproject.key.api.data.StrategyOptions";
 
         return await this.send("proof/auto", [proof, options_framed]);
     }
+
+    public async goalActions(id: NodeTextId, caretPosition: number) {
+        return await this.send("goal/actions", [id, caretPosition]);
+    }
 }
 
+//Custom error class for API errors
 class ApiError {
     code: number = 0;
     data: string = "";
@@ -95,11 +112,11 @@ class ApiError {
 
 export type ProofId = {
     env: EnvId;
-    proofId: string,
+    proofId: string;
 };
 
 export type EnvId = {
-    envId: string,
+    envId: string;
 };
 
 export type NodeId = {
@@ -113,16 +130,16 @@ export type TreeNodeDesc = {
 };
 
 export type PrintOptions = {
-    unicode: boolean,
-    width: number,
-    indentation: number,
-    pure: boolean,
-    termLabels: boolean,
+    unicode: boolean;
+    width: number;
+    indentation: number;
+    pure: boolean;
+    termLabels: boolean;
 };
 
 export type NodeTextDesc = {
-    id: NodeTextId,
-    result: string,
+    id: NodeTextId;
+    result: string;
     terms: NodeTextSpan[];
 };
 
@@ -130,11 +147,11 @@ export type NodeTextSpan = {
     start: number;
     end: number;
     children: NodeTextSpan[];
-}
+};
 
 export type NodeTextId = {
-    nodeId: NodeId,
-    nodeTextId: number,
+    nodeId: NodeId;
+    nodeTextId: number;
 };
 
 export type TreeNodeId = {
@@ -170,4 +187,18 @@ export type ProofStatus = {
     id: ProofId;
     openGoals: number;
     closeGoals: number;
+};
+
+export type TermActionDesc = {
+    commandId: TermActionId;
+    displayName: string;
+    description: string;
+    category: string | null;
+    // kind: TermActionKind;
+};
+
+export type TermActionId = {
+    nodeId: NodeId;
+    pio: string;
+    id: string;
 };

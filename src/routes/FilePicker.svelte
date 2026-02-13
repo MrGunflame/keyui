@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { open } from '@tauri-apps/plugin-dialog';
+    import { open } from "@tauri-apps/plugin-dialog";
 
     let { action, children } = $props();
 
@@ -29,32 +29,28 @@
         console.log(path);
         action(path);
     }
-
 </script>
 
 <button class="btn" onclick={openPicker}>{@render children?.()}</button>
 
 <style>
-
-/* FIXME: This currently is a clone of the button style in
+    /* FIXME: This currently is a clone of the button style in
 `Header.svelte` which we need to style the local button.
 It would be better if the caller can decide on the style instead. */
 
-.btn {
-    box-shadow: none;
+    .btn {
+        box-shadow: none;
 
-    padding: 4px 10px;
-    background-color: transparent;
-    border: none;
-    color: white;
-    cursor: pointer;
+        padding: 4px 10px;
+        border: none;
+        cursor: pointer;
+        background-color: transparent;
 
-    padding: 7px;
-    border-radius: 0;
-}
+        padding: 7px;
+        border-radius: 0;
+    }
 
-.btn:hover {
-    background-color: #555;
-}
-
+    .btn:hover {
+        background-color: var(--c-hover-bg);
+    }
 </style>

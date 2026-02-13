@@ -1,243 +1,623 @@
 <script lang="ts">
-  import type { TreeNodeDesc } from "../../routes/api";
+    import type { TreeNodeDesc } from "../../routes/api";
 
-  let { appState } = $props();
+    let { appState } = $props();
 
-  type Node = {
-    node: TreeNodeDesc;
-    depth: number;
-  };
+    type Node =
+        | { kind: "real"; node: TreeNodeDesc; depth: number }
+        | { kind: "virtual"; label: string; depth: number };
 
-  let nodes = $state<Node[]>([]);
-  
-  type CtxMenuState = {
-    open: boolean;
-    x: number;
-    y: number;
-    node: TreeNodeDesc | null;
-  };
+    let nodes = $state<Node[]>([]);
+    let searchQuery = $state("");
+    let collapsedNodes = $state<Set<string>>(new Set());
 
-  let ctxMenu = $state<CtxMenuState>({
-    open: false,
-    x: 0,
-    y: 0,
-    node: null,
-  });
-
-  function openCtxMenu(e: MouseEvent, node: TreeNodeDesc) {
-    e.preventDefault();
-    ctxMenu = {
-      open: true,
-      x: e.clientX,
-      y: e.clientY,
-      node,
+    //State for the context menu
+    type CtxMenuState = {
+        open: boolean;
+        x: number;
+        y: number;
+        node: TreeNodeDesc | null;
+        appliedOn: string | null;
+        loading: boolean;
+        error: string | null;
     };
-  }
 
-  function closeCtxMenu() {
-    ctxMenu.open = false;
-  }
-
-  function statusFromName(name: string) {
-    const up = name.toUpperCase();
-    if (up.includes("OPEN")) return "open";
-    if (up.includes("CLOSED")) return "closed";
-    return "unknown";
-  }
-
-  // Leaf vs internal (computed from list order + depth)
-  function isLeaf(index: number) {
-    const currentDepth = nodes[index]?.depth ?? 0;
-    const nextDepth = nodes[index + 1]?.depth ?? -1;
-    return nextDepth <= currentDepth;
-  }
-
-  function isActive(node: TreeNodeDesc) {
-    return appState.active_node?.nodeId == node.id.nodeId;
-  }
-
-  // DEV ONLY: show a small fake tree when no proof is loaded (so we can work on UI)
-  const DEMO_TREE = false;
-
-  function makeDemoNodes(): Node[] {
-    const fake = (nodeId: number, name: string) =>
-      ({ id: { nodeId }, name } as unknown as TreeNodeDesc);
-
-    return [
-      { node: fake(0, "OPEN Root"), depth: 0 },
-      { node: fake(1, "OPEN Internal A"), depth: 1 },
-      { node: fake(2, "CLOSED Leaf A1"), depth: 2 },
-      { node: fake(3, "OPEN Leaf A2"), depth: 2 },
-      { node: fake(4, "CLOSED Internal B"), depth: 1 },
-      { node: fake(5, "CLOSED Leaf B1"), depth: 2 },
-    ];
-  }
-
-  async function loadTree(client:any , proof:any) {
-    let nodes = [];
-    let stack: { id: any; depth: number }[] = [];
-
-
-    let root = await client.proofTreeRoot(proof);
-    nodes.push({ node: root, depth: 0 });
-    stack.push({ id: root.id, depth: 0 });
-
-    while (stack.length != 0) {
-      let { id, depth } = stack.pop()!;
-      let elems = await client.proofTreeChildren(proof, id);
-
-      for (const elem of elems) {
-        nodes.push({ node: elem, depth: depth + 1 });
-        stack.push({ id: elem.id, depth: depth + 1 });
-      }
-    }
-
-    return nodes;
-  }
-
-  // Rerender whenever proof tree change signal is received.
-  let waker = appState.proofTreeChanged.subscribe();
-
-  $effect(() => {
-    $waker;
-    
-    if (appState.proof == null) {
-      if (DEMO_TREE) {
-        nodes = makeDemoNodes();
-      }
-      return;
-    }
-
-    loadTree(appState.client, appState.proof).then(n => {
-      nodes = n;
+    let ctxMenu = $state<CtxMenuState>({
+        open: false,
+        x: 0,
+        y: 0,
+        node: null,
+        appliedOn: null,
+        loading: false,
+        error: null,
     });
-  });
+
+    //check if a node is a closed goal
+    function isClosedGoal(node: TreeNodeDesc | null) {
+        if (!node) return false;
+        return node.name.toLowerCase().includes("closed goal");
+    }
+
+    //Fetches the sequent for a given node using the goal/print API
+    async function fetchAppliedOn(nodeId: any) {
+        const options = {
+            unicode: false,
+            width: 120,
+            indentation: 0,
+            pure: false,
+            termLabels: true,
+        };
+
+        //goalPrint takes a NodeId
+        const res = await appState.client.goalPrint(nodeId, options);
+        return res.result as string;
+    }
+
+    //Opens the context menu when user right-clicks a node
+    function openCtxMenu(e: MouseEvent, node: TreeNodeDesc) {
+        e.preventDefault();
+
+        // If it's a closed goal: don't fetch anything
+        if (isClosedGoal(node)) {
+            ctxMenu = {
+                open: true,
+                x: e.clientX,
+                y: e.clientY,
+                node,
+                appliedOn: null,
+                loading: false,
+                error: null,
+            };
+            return;
+        }
+
+        //Normal nodes : fetch "AppliedOn" using goalPrint
+        ctxMenu = {
+            open: true,
+            x: e.clientX,
+            y: e.clientY,
+            node,
+            appliedOn: null,
+            loading: true,
+            error: null,
+        };
+
+        //Fetch the sequent in the background
+        fetchAppliedOn(node.id)
+            .then((text) => {
+                if (!ctxMenu.open || ctxMenu.node?.id.nodeId !== node.id.nodeId)
+                    return;
+
+                ctxMenu.appliedOn = text;
+                ctxMenu.loading = false;
+            })
+            .catch((err) => {
+                if (!ctxMenu.open || ctxMenu.node?.id.nodeId !== node.id.nodeId)
+                    return;
+
+                ctxMenu.error = err?.toString?.() ?? "Unknown error";
+                ctxMenu.loading = false;
+            });
+    }
+
+    function closeCtxMenu() {
+        ctxMenu.open = false;
+    }
+
+    function statusFromName(name: string) {
+        const up = name.toUpperCase();
+        if (up.includes("OPEN")) return "open";
+        if (up.includes("CLOSED")) return "closed";
+        return "unknown";
+    }
+
+    function isLeaf(index: number) {
+        const currentDepth = nodes[index]?.depth ?? 0;
+        const nextDepth = nodes[index + 1]?.depth ?? -1;
+        return nextDepth <= currentDepth;
+    }
+
+    function isActive(node: TreeNodeDesc) {
+        return Number(appState.active_node?.nodeId) === Number(node.id.nodeId);
+    }
+
+    function toggleCollapse(nodeId: string) {
+        if (collapsedNodes.has(nodeId)) {
+            collapsedNodes.delete(nodeId);
+        } else {
+            collapsedNodes.add(nodeId);
+        }
+        collapsedNodes = new Set(collapsedNodes);
+    }
+
+    function isCollapsed(nodeId: string) {
+        return collapsedNodes.has(nodeId);
+    }
+
+    function isHiddenByCollapse(index: number): boolean {
+        const currentNode = nodes[index];
+        if (!currentNode) return false;
+
+        for (let i = index - 1; i >= 0; i--) {
+            const ancestor = nodes[i];
+
+            if (ancestor.depth < currentNode.depth) {
+                if (ancestor.kind === "virtual") {
+                    continue;
+                }
+
+                const ancestorNodeId = ancestor.node.id.nodeId;
+                if (collapsedNodes.has(ancestorNodeId)) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    function matchesSearch(node: TreeNodeDesc): boolean {
+        if (!searchQuery.trim()) return true;
+
+        const query = searchQuery.toLowerCase();
+        const nodeName = node.name.toLowerCase();
+        const nodeId = node.id.nodeId.toString();
+
+        return nodeName.includes(query) || nodeId.includes(query);
+    }
+
+    function hasMatchingDescendant(index: number): boolean {
+        if (!searchQuery.trim()) return false;
+
+        const currentDepth = nodes[index]?.depth ?? 0;
+
+        for (let i = index + 1; i < nodes.length; i++) {
+            if (nodes[i].depth <= currentDepth) break;
+
+            if (nodes[i].kind === "virtual") return true;
+
+            if (matchesSearch(nodes[i].node)) return true;
+        }
+        return false;
+    }
+
+    function shouldShowNode(index: number): boolean {
+        const node = nodes[index];
+        if (!node) return false;
+
+        if (isHiddenByCollapse(index)) return false;
+
+        if (!searchQuery.trim()) return true;
+
+        if (node.kind === "virtual") return true;
+
+        return matchesSearch(node.node) || hasMatchingDescendant(index);
+    }
+
+    // DEV ONLY: show a small fake tree when no proof is loaded (so we can work on UI)
+    // DEV ONLY: keep FALSE for PR
+    const DEMO_TREE = false;
+
+    function makeDemoNodes(): Node[] {
+        const fake = (nodeId: number, name: string) =>
+            ({ id: { nodeId }, name }) as unknown as TreeNodeDesc;
+
+        return [
+            { kind: "real", node: fake(1, "OPEN Root"), depth: 0 },
+            { kind: "real", node: fake(2, "OPEN Step 1"), depth: 0 },
+            { kind: "real", node: fake(3, "OPEN Step 2"), depth: 0 },
+            { kind: "real", node: fake(4, "OPEN Step 3"), depth: 0 },
+
+            { kind: "real", node: fake(5, "OPEN Branching Rule"), depth: 0 },
+            { kind: "virtual", label: "5.1", depth: 1 },
+            { kind: "real", node: fake(6, "CLOSED Left leaf"), depth: 2 },
+            { kind: "virtual", label: "5.2", depth: 1 },
+            { kind: "real", node: fake(7, "OPEN Right path"), depth: 2 },
+            { kind: "real", node: fake(8, "CLOSED Right leaf"), depth: 2 },
+        ];
+    }
+
+    async function loadTreeCollapsed(client: any, proof: any): Promise<Node[]> {
+        const out: Node[] = [];
+
+        const childrenCache = new Map<number, TreeNodeDesc[]>();
+
+        const idOf = (n: TreeNodeDesc) => Number(n.id.nodeId);
+
+        async function getChildren(
+            node: TreeNodeDesc,
+        ): Promise<TreeNodeDesc[]> {
+            const id = idOf(node);
+            if (childrenCache.has(id)) return childrenCache.get(id)!;
+            const kids = await client.proofTreeChildren(proof, node.id);
+            childrenCache.set(id, kids);
+            return kids;
+        }
+
+        async function emit(node: TreeNodeDesc, depth: number): Promise<void> {
+            const nodeId = idOf(node);
+
+            out.push({ kind: "real", node, depth });
+
+            const kids = await getChildren(node);
+
+            // Linear chain => keep SAME depth
+            if (kids.length === 1) {
+                await emit(kids[0], depth);
+                return;
+            }
+
+            // Branch => create virtual nodes n.1, n.2, ...
+            if (kids.length >= 2) {
+                for (let i = 0; i < kids.length; i++) {
+                    const label = `${nodeId}.${i + 1}`;
+                    out.push({ kind: "virtual", label, depth: depth + 1 });
+                    await emit(kids[i], depth + 2);
+                }
+            }
+        }
+
+        const root = await client.proofTreeRoot(proof);
+        await emit(root, 0);
+
+        return out;
+    }
+
+    let waker = appState.proofTreeChanged.subscribe();
+
+    $effect(() => {
+        $waker;
+
+        if (appState.proof == null) {
+            nodes = DEMO_TREE ? makeDemoNodes() : [];
+            return;
+        }
+
+        loadTreeCollapsed(appState.client, appState.proof).then((n) => {
+            nodes = n;
+        });
+    });
 </script>
 
-<div>
-  <h3>Proof Tree</h3>
-  <ul class="node-list">
-    {#each nodes as node, index}
-      <li style="margin-left: {node.depth * 14}px;">
-        <button
-          class="node {statusFromName(node.node.name)} {isActive(node.node) ? "active" : ""} {isLeaf(index) ? "leaf" : "internal"}"
-          onclick={() => (appState.active_node = node.node.id)}
-        oncontextmenu={(e)=>openCtxMenu(e,node.node)}
-        >
-          {node.node.id.nodeId}: {node.node.name}
-        </button>
-      </li>
-    {/each}
-  </ul>
-  {#if ctxMenu.open}
-    <div class="ctx-backdrop" onclick={closeCtxMenu}>
-      <div
-        class="ctx-menu"
-        onclick={(e) => e.stopPropagation()}
-      >
-        <div class="ctx-title">Node {ctxMenu.node?.id.nodeId}</div>
-        <button class="ctx-item" disabled>Action A</button>
-        <button class="ctx-item" disabled> Action B</button>
-        <button class="ctx-item" disabled> Action C</button>
-      </div>
+<div class="proof-tree-container">
+    <h3>Proof Tree</h3>
+
+    <div class="search-container">
+        <input
+            type="text"
+            class="search-input"
+            placeholder="Suche nach Name oder ID..."
+            bind:value={searchQuery}
+        />
+        {#if searchQuery}
+            <button class="clear-btn" onclick={() => (searchQuery = "")}
+                >✕</button
+            >
+        {/if}
     </div>
-  {/if}
+
+    <ul class="node-list">
+        {#each nodes as item, index}
+            {#if shouldShowNode(index)}
+                <li style="margin-left: {item.depth * 14}px;">
+                    {#if item.kind === "real"}
+                        <button
+                            class="node {statusFromName(
+                                item.node.name,
+                            )} {isActive(item.node) ? 'active' : ''} {isLeaf(
+                                index,
+                            )
+                                ? 'leaf'
+                                : 'internal'}"
+                            onclick={() =>
+                                (appState.active_node = item.node.id)}
+                            oncontextmenu={(e) => openCtxMenu(e, item.node)}
+                        >
+                            {#if !isLeaf(index)}
+                                <span
+                                    class="collapse-icon"
+                                    onclick={(e) => {
+                                        e.stopPropagation();
+                                        toggleCollapse(item.node.id.nodeId);
+                                    }}
+                                >
+                                    {isCollapsed(item.node.id.nodeId)
+                                        ? "▶"
+                                        : "▼"}
+                                </span>
+                            {/if}
+
+                            {Number(item.node.id.nodeId)}: {item.node.name}
+                        </button>
+                    {:else}
+                        <div class="virtual">{item.label}</div>
+                    {/if}
+                </li>
+            {/if}
+        {/each}
+    </ul>
+
+    {#if ctxMenu.open}
+        <div class="ctx-backdrop" onclick={closeCtxMenu}>
+            <div
+                class="ctx-menu"
+                style="left:{ctxMenu.x}px; top:{ctxMenu.y}px;"
+                onclick={(e) => e.stopPropagation()}
+            >
+                {#if ctxMenu.node?.name?.toLowerCase() === "closed goal"}
+                    <div class="ctx-simple">A closed goal</div>
+                {:else}
+                    <div class="ctx-title">Taclet info</div>
+
+                    <div class="ctx-content">
+                        <div class="ctx-row">
+                            <div class="ctx-label">Rule</div>
+                            <div class="ctx-value">
+                                {ctxMenu.node?.name ?? "-"}
+                            </div>
+                        </div>
+
+                        <div class="ctx-sep"></div>
+
+                        <div class="ctx-label">Applied on</div>
+
+                        {#if ctxMenu.loading}
+                            <div class="ctx-mono loading">Loading…</div>
+                        {:else if ctxMenu.error}
+                            <div class="ctx-mono error">{ctxMenu.error}</div>
+                        {:else}
+                            <div class="ctx-mono">
+                                {ctxMenu.appliedOn ?? "-"}
+                            </div>
+                        {/if}
+                    </div>
+                {/if}
+            </div>
+        </div>
+    {/if}
 </div>
 
 <style>
-  .node-list {
-    height: 100%;
-    overflow-y: auto;
-    list-style: none;
-    padding: 0;
-    margin: 0;
-  }
+    .proof-tree-container {
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+        overflow: hidden;
+    }
+    .proof-tree-container h3 {
+        margin: 0 0 10px 0;
+        flex-shrink: 0;
+    }
+    .proof-tree-container {
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        padding: 0 10px;
+    }
+    .search-container {
+        position: relative;
+        margin: 10px 0;
+    }
+    .search-input {
+        width: 100%;
+        padding: 10px 35px 10px 12px;
+        background: var(--c-hover-bg);
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        border-radius: 8px;
+        font-size: 14px;
+        box-sizing: border-box;
+    }
+    .search-input:focus {
+        outline: none;
+        border-color: rgba(80, 200, 120, 0.5);
+    }
 
-  .node {
-    width: 100%;
-    text-align: left;
+    .search-input::placeholder {
+        /* color: rgba(255, 255, 255, 0.4); */
+        color: var(--c-text);
+        opacity: 0.4;
+    }
 
-    color: var(--c-text);
-    border: 1px solid var(--c-border);
-    padding: 8px 10px;
-    margin: 6px 0;
-    border-radius: 8px;
+    .clear-btn {
+        position: absolute;
+        right: 8px;
+        top: 50%;
+        transform: translateY(-50%);
+        background: transparent;
+        border: none;
+        color: var(--c-text);
+        cursor: pointer;
+        padding: 4px 8px;
+        font-size: 16px;
+        opacity: 0.5;
+    }
 
-    background: var(--c-node);  
-    font-weight: 600;
-    cursor: pointer;
-  }
+    .clear-btn:hover {
+        color: var(--c-text);
+        opacity: 1;
+    }
 
-  .node:hover {
-    border-color: var(--c-border-hover);
-  }
+    .node-list {
+        flex: 1;
+        overflow-y: auto;
+        overflow-x: hidden;
+        list-style: none;
+        padding: 0;
+        margin: 0;
+    }
 
+    .node {
+        width: 100%;
+        text-align: left;
+        word-wrap: break-word;
+        white-space: normal;
+        display: flex;
+        align-items: center;
+        gap: 8px;
 
-  .node.open{ background: var(--c-node-open);}
-  .node.closed{ 
-    background: var(--c-node-closed);
-    opacity: 0.55;
-  }
-  .node.unknown{ background: var(--c-node-unknwon);}
-  
-  .ctx-backdrop {
-    position: fixed;
-    inset: 0;
-    z-index: 999;
-  }
+        color: var(--c-text);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        padding: 8px 10px;
+        margin: 6px 0;
+        border-radius: 8px;
 
-  .ctx-menu {
-    position: fixed;
-    z-index: 1000;
-    min-width: 220px;
-    background: var(--c-panel-2);
-    border: 1px solid var(--c-border);
-    border-radius: 8px;
-    padding: 8px;
-    box-shadow: 0 10px 25px rgba(0,0,0,0.4);
-  }
+        background: var(--c-hover-bg);
+        font-weight: 600;
+        cursor: pointer;
+        transition:
+            border-color 120ms ease,
+            transform 120ms ease;
+    }
 
-  .ctx-title {
-    font-size: 12px;
-    opacity: 0.8;
-    padding: 6px 8px;
-    border-bottom: 1px solid var(--c-border);
-    margin-bottom: 6px;
-  }
+    .node:hover {
+        border-color: rgba(255, 255, 255, 0.22);
+        transform: translateY(-1px);
+    }
 
-  .ctx-item {
-    width: 100%;
-    text-align: left;
-    padding: 8px;
-    border: 0;
-    background: transparent;
-    color: var(--c-text);
-    cursor: not-allowed;
-    border-radius: 6px;
-    opacity: 0.7;
-  }
+    .virtual {
+        width: 100%;
+        padding: 6px 10px;
+        margin: 6px 0;
+        border-radius: 8px;
+        border: 1px dashed rgba(255, 255, 255, 0.2);
+        opacity: 0.8;
+        background: rgba(255, 255, 255, 0.04);
+        font-weight: 600;
+    }
 
-  .ctx-item:hover {
-    background:var(--c-hover-bg);
-  }
+    .collapse-icon {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 16px;
+        height: 16px;
+        font-size: 10px;
+        opacity: 0.7;
+        transition: opacity 0.2s;
+    }
 
-  /* Active node = very visible */
-  .node.active {
-    outline: 2px solid var(--c-active-outline);
-    outline-offset: 2px;
-  }
+    .collapse-icon:hover {
+        opacity: 1;
+    }
 
-  /* leaf vs internal */
-  .node.leaf {
-    border-left: 6px solid var(--c-border);
-  }
+    .node-content {
+        flex: 1;
+    }
 
-  .node.internal {
-    border-left: 6px solid var(--c-border-hover);
-  }
+    .open {
+        background: var(--c-node-open);
+    }
+    .closed {
+        background: var(--c-node-closed);
+    }
+    .unknown {
+        background: var(--c-node-unknown);
+    }
 
-  /* active + closed should still be readable */
-  .node.closed.active {
-    opacity: 0.9;
-  }
+    .ctx-backdrop {
+        position: fixed;
+        inset: 0;
+        z-index: 999;
+    }
+    .ctx-simple {
+        padding: 10px 12px;
+        font-size: 13px;
+        font-weight: 600;
+        opacity: 0.95;
+        white-space: nowrap;
+    }
+
+    .ctx-menu {
+        position: fixed;
+        z-index: 1000;
+        min-width: 260px;
+        max-width: 420px;
+        background: rgba(20, 20, 20, 0.92);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 12px;
+        padding: 10px 12px;
+        box-shadow: 0 18px 45px rgba(0, 0, 0, 0.55);
+        backdrop-filter: blur(10px);
+        transform: translate(8px, 8px);
+    }
+
+    .ctx-title {
+        font-size: 12px;
+        font-weight: 700;
+        letter-spacing: 0.2px;
+        opacity: 0.9;
+        padding: 6px 2px 10px 2px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        margin-bottom: 10px;
+    }
+
+    .ctx-content {
+        display: grid;
+        gap: 10px;
+    }
+
+    .ctx-row {
+        display: grid;
+        grid-template-columns: 92px 1fr;
+        gap: 10px;
+        align-items: baseline;
+    }
+
+    .ctx-label {
+        font-size: 12px;
+        opacity: 0.7;
+    }
+
+    .ctx-value {
+        font-size: 13px;
+        font-weight: 650;
+    }
+
+    .ctx-sep {
+        height: 1px;
+        background: rgba(255, 255, 255, 0.08);
+        margin: 2px 0;
+    }
+
+    .ctx-mono {
+        font-family:
+            ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+            "Liberation Mono", "Courier New", monospace;
+        font-size: 12px;
+        line-height: 1.35;
+
+        white-space: pre-wrap;
+        word-break: break-word;
+
+        padding: 8px 10px;
+        border-radius: 10px;
+        background: rgba(255, 255, 255, 0.06);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .ctx-mono.loading {
+        opacity: 0.75;
+    }
+
+    .ctx-mono.error {
+        border-color: rgba(255, 120, 120, 0.35);
+        background: rgba(255, 120, 120, 0.1);
+    }
+
+    .node.active {
+        outline: 2px solid rgba(80, 200, 120, 0.95);
+        outline-offset: 2px;
+    }
+
+    .node.leaf {
+        border-left: 6px solid rgba(255, 255, 255, 0.16);
+    }
+
+    .node.internal {
+        border-left: 6px solid rgba(255, 255, 255, 0.34);
+    }
+
+    .node.closed.active {
+        opacity: 0.9;
+    }
 </style>

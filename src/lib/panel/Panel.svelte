@@ -8,11 +8,14 @@
 
 <style>
     .panel {
-        background:var(--c-panel);
+        background: var(--c-panel);
         padding: 10px;
         border-radius: 6px;
         height: 100%;
         color: var(--c-text);
         border: 1px solid var(--c-border);
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
     }
 </style>
