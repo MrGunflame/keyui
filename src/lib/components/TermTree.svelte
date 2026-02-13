@@ -1,6 +1,6 @@
 <script lang="ts">
     import type { TermActionDesc } from "../../routes/api";
-    
+
     let { appState, sequent } = $props();
 
     type Span = {
@@ -13,14 +13,19 @@
         textStart: number;
     };
 
-    function expandTerms(seq: string, terms: NodeTextSpan[], startIndex: number, textStart: number): Span[] {
-        terms.sort((a, b) => (a.start - b.start));
+    function expandTerms(
+        seq: string,
+        terms: NodeTextSpan[],
+        startIndex: number,
+        textStart: number,
+    ): Span[] {
+        terms.sort((a, b) => a.start - b.start);
 
         let output = [];
         let outerSpans = [];
 
         let pos = 0;
-        terms.forEach(term => {
+        terms.forEach((term) => {
             // Mark section between subterms.
             if (pos != term.start) {
                 let s = seq.slice(pos, term.start);
@@ -31,10 +36,15 @@
                     textStart: textStart + pos,
                 });
             }
-            
+
             let s = seq.slice(term.start, term.end);
             if (s.length != 0) {
-                let subterms = expandTerms(s, term.children, startIndex + output.length, textStart + term.start);
+                let subterms = expandTerms(
+                    s,
+                    term.children,
+                    startIndex + output.length,
+                    textStart + term.start,
+                );
                 output = output.concat(subterms);
             }
 
@@ -53,7 +63,7 @@
         }
 
         let endIndex = startIndex + output.length;
-        outerSpans.forEach(index => {
+        outerSpans.forEach((index) => {
             for (let i = startIndex; i < endIndex; i++) {
                 output[index].spans.push(i);
             }
@@ -87,7 +97,7 @@
         open: boolean;
         x: number;
         y: number;
-        actions: TermActionDesc[],
+        actions: TermActionDesc[];
     };
 
     let contextMenuState = $state<ContextMenuState>({
@@ -100,7 +110,7 @@
     function onClick(event: MouseEvent, index: number) {
         const textStart = spans[index].textStart;
 
-        appState.client.goalActions(sequent.id, textStart).then(actions => {
+        appState.client.goalActions(sequent.id, textStart).then((actions) => {
             contextMenuState = {
                 open: true,
                 x: event.pageX,
@@ -113,24 +123,27 @@
 
 <div class="tree">
     {#each spans as span, index}
-    <span
-        onmouseover={(e) => onMouseOver(index)}
-        onmouseout={(e) => onMouseOut(index)}
-        onclick={(e) => onClick(e, index)}
-        class:span-hover={isMarked(index)}
-    >
-        {span.content}
-    </span>
+        <span
+            onmouseover={(e) => onMouseOver(index)}
+            onmouseout={(e) => onMouseOut(index)}
+            onclick={(e) => onClick(e, index)}
+            class:span-hover={isMarked(index)}
+        >
+            {span.content}
+        </span>
     {/each}
 
     {#if contextMenuState.open}
-    <div class="ctx-menu" style="top: {contextMenuState.y}px; left: {contextMenuState.x}px;">
-        <ul>
-            {#each contextMenuState.actions as action}
-                <li><button>{action.displayName}</button></li>
-            {/each}
-        </ul>
-    </div>
+        <div
+            class="ctx-menu"
+            style="top: {contextMenuState.y}px; left: {contextMenuState.x}px;"
+        >
+            <ul>
+                {#each contextMenuState.actions as action}
+                    <li><button>{action.displayName}</button></li>
+                {/each}
+            </ul>
+        </div>
     {/if}
 </div>
 
@@ -147,8 +160,8 @@
     }
     .tree span {
         display: inline;
-        white-space: pre-wrap; 
-        word-break: break-word; 
+        white-space: pre-wrap;
+        word-break: break-word;
     }
     .display {
         margin-top: 8px;
@@ -167,9 +180,9 @@
         padding: 5px;
         border: 1px solid #444;
         border-radius: 8px;
-        box-shadow: 0 10px 25px rgba(0,0,0,0.4);
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4);
         z-index: 1000;
-   }
+    }
 
     .ctx-menu ul {
         list-style-type: none;
