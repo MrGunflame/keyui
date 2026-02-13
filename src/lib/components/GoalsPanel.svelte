@@ -1,34 +1,34 @@
 <script lang="ts">
-  import type { NodeDesc } from "../../routes/api";
+    import type { NodeDesc } from "../../routes/api";
 
-  let { appState } = $props();
+    let { appState } = $props();
 
-  let goals = $state<NodeDesc[]>([]);
- 
-  async function loadOpenGoals(client: any, proof: any) {
-    const goals = await client.proofGoals(proof, true, true);
-    return goals;
-  }
+    let goals = $state<NodeDesc[]>([]);
 
-  // Reload whenever a new proof is loaded
-  $effect(() => {
-    if (appState.proof == null) {
-      return;
+    async function loadOpenGoals(client: any, proof: any) {
+        const goals = await client.proofGoals(proof, true, true);
+        return goals;
     }
-    
-    loadOpenGoals(appState.client, appState.proof).then(res => {
-      goals = res;
+
+    // Reload whenever a new proof is loaded
+    $effect(() => {
+        if (appState.proof == null) {
+            return;
+        }
+
+        loadOpenGoals(appState.client, appState.proof).then((res) => {
+            goals = res;
+        });
     });
-  });
 </script>
 
 <div class="panel">
-  <h3>Goals</h3>
+    <h3>Goals</h3>
 
-  <div>Open goals: {goals.length}</div>
-  <ul>
-  {#each goals as goal}
-    <li>{goal.description}</li>
-  {/each}
-  </ul>
+    <div>Open goals: {goals.length}</div>
+    <ul>
+        {#each goals as goal}
+            <li>{goal.description}</li>
+        {/each}
+    </ul>
 </div>

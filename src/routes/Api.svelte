@@ -11,14 +11,14 @@
         try {
             let b = body.replaceAll("\\", "\\\\").replaceAll("\n", "\\n");
             console.log(b);
-            
+
             let payload = JSON.parse(b);
 
             console.log(method);
 
             let resp_json = await invoke("send_msg", {
-                "method": method,
-                "params": payload,
+                method: method,
+                params: payload,
             });
 
             console.log(resp_json);

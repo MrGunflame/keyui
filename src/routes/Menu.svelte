@@ -7,10 +7,8 @@
 </div>
 
 <style>
-
-.menu {
-    position: absolute;
-    z-index: 100;
-}
-
+    .menu {
+        position: absolute;
+        z-index: 100;
+    }
 </style>
