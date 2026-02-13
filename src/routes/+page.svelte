@@ -121,8 +121,8 @@ println!("Hello from Rust + Tauri!");
         display: flex;
         flex-flow: column;
 
-        background: #1e1e1e;
-        color: white;
+        background: var(--c-main-background);
+        color: var(--c-text);
     }
 
     .header {
@@ -159,6 +159,7 @@ println!("Hello from Rust + Tauri!");
         cursor: pointer;
         border-radius: 6px;
         background-color: white;
+        color: black;
     }
 
     .play:disabled {

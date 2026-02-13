@@ -42,16 +42,15 @@ It would be better if the caller can decide on the style instead. */
         box-shadow: none;
 
         padding: 4px 10px;
-        background-color: transparent;
         border: none;
-        color: white;
         cursor: pointer;
+        background-color: transparent;
 
         padding: 7px;
         border-radius: 0;
     }
 
     .btn:hover {
-        background-color: #555;
+        background-color: var(--c-hover-bg);
     }
 </style>

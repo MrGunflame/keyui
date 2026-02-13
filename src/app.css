@@ -1,0 +1,57 @@
+:root {
+  color-scheme: dark;
+
+  --c-bg: #141414;
+  --c-panel: #252525;
+  --c-panel-2: #1f1f1f;
+
+  --c-text: #ffffff;
+  --c-border: rgba(255, 255, 255, 0.08);
+  --c-border-hover: rgba(255, 255, 255, 0.22);
+
+  --c-node: #2b2b2b;
+  --c-node-open: #6a2525;
+  --c-node-closed: #1f4f2a;
+  --c-node-unknown: #333;
+
+  --c-active-outline: rgba(80, 200, 120, 0.95);
+  --c-hover-bg: #2b2b2b;
+  --c-span-hover: gray;
+
+  --c-main-background: #1e1e1e;
+
+  --c-main: black;
+  --c-main-inverse: white;
+}
+
+:root[data-theme="light"] {
+  color-scheme: light;
+
+  --c-bg: #f5f6f8;
+  --c-panel: #ffffff;
+  --c-panel-2: #ffffff;
+
+  --c-text: #111111;
+  --c-border: rgba(0, 0, 0, 0.10);
+  --c-border-hover: rgba(0, 0, 0, 0.20);
+
+  --c-node: #f2f2f2;
+  --c-node-open: #ffd6d6;
+  --c-node-closed: #d6ffe1;
+  --c-node-unknown: #e8e8e8;
+
+  --c-active-outline: rgba(34, 139, 34, 0.8);
+  --c-hover-bg: #ededed;
+  --c-span-hover: #cfcfcf;
+
+  --c-main-background: #ffffff;
+
+  --c-main: white;
+  --c-main-inverse: black;
+}
+
+body {
+  margin: 0;
+  background: var(--c-bg);
+  color: var(--c-text);
+}

@@ -401,10 +401,9 @@
     .search-input {
         width: 100%;
         padding: 10px 35px 10px 12px;
-        background: #2b2b2b;
+        background: var(--c-hover-bg);
         border: 1px solid rgba(255, 255, 255, 0.12);
         border-radius: 8px;
-        color: white;
         font-size: 14px;
         box-sizing: border-box;
     }
@@ -414,7 +413,9 @@
     }
 
     .search-input::placeholder {
-        color: rgba(255, 255, 255, 0.4);
+        /* color: rgba(255, 255, 255, 0.4); */
+        color: var(--c-text);
+        opacity: 0.4;
     }
 
     .clear-btn {
@@ -424,14 +425,16 @@
         transform: translateY(-50%);
         background: transparent;
         border: none;
-        color: rgba(255, 255, 255, 0.5);
+        color: var(--c-text);
         cursor: pointer;
         padding: 4px 8px;
         font-size: 16px;
+        opacity: 0.5;
     }
 
     .clear-btn:hover {
-        color: white;
+        color: var(--c-text);
+        opacity: 1;
     }
 
     .node-list {
@@ -452,13 +455,13 @@
         align-items: center;
         gap: 8px;
 
-        color: white;
+        color: var(--c-text);
         border: 1px solid rgba(255, 255, 255, 0.08);
         padding: 8px 10px;
         margin: 6px 0;
         border-radius: 8px;
 
-        background: #2b2b2b;
+        background: var(--c-hover-bg);
         font-weight: 600;
         cursor: pointer;
         transition:
@@ -477,7 +480,7 @@
         margin: 6px 0;
         border-radius: 8px;
         border: 1px dashed rgba(255, 255, 255, 0.2);
-        color: rgba(255, 255, 255, 0.8);
+        opacity: 0.8;
         background: rgba(255, 255, 255, 0.04);
         font-weight: 600;
     }
@@ -502,13 +505,13 @@
     }
 
     .open {
-        background: #662222;
+        background: var(--c-node-open);
     }
     .closed {
-        background: #225522;
+        background: var(--c-node-closed);
     }
     .unknown {
-        background: #333;
+        background: var(--c-node-unknown);
     }
 
     .ctx-backdrop {
@@ -604,19 +607,6 @@
     .node.active {
         outline: 2px solid rgba(80, 200, 120, 0.95);
         outline-offset: 2px;
-    }
-
-    .node.open {
-        background: #6a2525;
-    }
-
-    .node.closed {
-        background: #1f4f2a;
-        opacity: 0.55;
-    }
-
-    .node.unknown {
-        background: #333;
     }
 
     .node.leaf {

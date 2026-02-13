@@ -1,6 +1,8 @@
 <script lang="ts">
+    import ThemeToggle from "$lib/components/ThemeToggle.svelte";
     import Menu from "./Menu.svelte";
     import FilePicker from "./FilePicker.svelte";
+    import { open } from "@tauri-apps/plugin-fs";
 
     let { appState, onError } = $props();
 
@@ -43,6 +45,7 @@
             <button>About</button>
         </li>
     </ul>
+    <ThemeToggle />
 </div>
 
 <style>
@@ -51,15 +54,18 @@
     }
 
     .header button:hover {
-        background-color: #555;
+        background-color: var(--c-hover-bg);
         border-radius: 0;
     }
 
     .header {
         padding: 8px 15px;
-        background-color: #222;
-        color: white;
-        border-bottom: 2px solid gray;
+        background-color: var(--c-panel);
+        border-bottom: 2px solid var(--c-border);
+
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
     }
 
     .top-menu {
@@ -77,7 +83,6 @@
         padding: 4px 10px;
         background-color: transparent;
         border: none;
-        color: white;
         cursor: pointer;
     }
 
@@ -86,7 +91,27 @@
         align-items: flex-start;
         flex-direction: column;
         padding: 0;
-        background-color: #333;
+        background-color: var(--c-panel-2);
+        border: 1px solid var(--c-border);
+    }
+
+    .top-menu {
+        display: flex;
+        list-style-type: none;
+        margin: 0;
+        padding: 0;
+    }
+
+    .top-menu li {
+        display: inline-block;
+    }
+
+    .submenu {
+        display: flex;
+        align-items: flex-start;
+        flex-direction: column;
+        padding: 0;
+        background-color: var(--c-bg);
         border: 1px solid #444;
     }
 </style>
