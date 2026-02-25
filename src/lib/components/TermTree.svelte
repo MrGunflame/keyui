@@ -1,5 +1,9 @@
 <script lang="ts">
-    import type { TermActionDesc } from "../../routes/api";
+    import type {
+        TermActionDesc,
+        NodeTextSpan,
+        TermActionId,
+    } from "../../routes/api";
 
     let { appState, sequent } = $props();
 
@@ -21,7 +25,7 @@
     ): Span[] {
         terms.sort((a, b) => a.start - b.start);
 
-        let output = [];
+        let output: Span[] = [];
         let outerSpans = [];
 
         let pos = 0;
@@ -110,14 +114,33 @@
     function onClick(event: MouseEvent, index: number) {
         const textStart = spans[index].textStart;
 
-        appState.client.goalActions(sequent.id, textStart).then((actions) => {
-            contextMenuState = {
-                open: true,
-                x: event.pageX,
-                y: event.pageY,
-                actions,
-            };
-        });
+        appState.client
+            .goalActions(sequent.id, textStart)
+            .then((actions: TermActionDesc[]) => {
+                contextMenuState = {
+                    open: true,
+                    x: event.pageX,
+                    y: event.pageY,
+                    actions,
+                };
+            });
+    }
+
+    function applyAction(id: TermActionId) {
+        contextMenuState.open = false;
+
+        appState.client
+            .applyAction(id)
+            .then((ok: boolean) => {
+                if (ok) {
+                    appState.proofTreeChanged.notify();
+                } else {
+                    console.error("failed to apply rule");
+                }
+            })
+            .catch((err: Error) => {
+                // TODO: Post error to error widget.
+            });
     }
 </script>
 
@@ -140,7 +163,11 @@
         >
             <ul>
                 {#each contextMenuState.actions as action}
-                    <li><button>{action.displayName}</button></li>
+                    <li>
+                        <button onclick={() => applyAction(action.commandId)}
+                            >{action.displayName}</button
+                        >
+                    </li>
                 {/each}
             </ul>
         </div>

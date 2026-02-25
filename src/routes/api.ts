@@ -96,6 +96,10 @@ export class Client {
     public async goalActions(id: NodeTextId, caretPosition: number) {
         return await this.send("goal/actions", [id, caretPosition]);
     }
+
+    public async applyAction(id: TermActionId): Promise<boolean> {
+        return await this.send("goal/apply_action", [id]);
+    }
 }
 
 //Custom error class for API errors
