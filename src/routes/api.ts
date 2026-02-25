@@ -100,6 +100,14 @@ export class Client {
     public async applyAction(id: TermActionId): Promise<boolean> {
         return await this.send("goal/apply_action", [id]);
     }
+
+    /// Saves the proof with the given ID to the given file path.
+    ///
+    /// The proof must have been loaded previously and not yet been disposed.
+    /// Returns an ApiError if saving fails for any reason.
+    public async saveProof(proof: ProofId, path: String): Promise<void> {
+        return await this.send("proof/save", [proof, path]);
+    }
 }
 
 //Custom error class for API errors
