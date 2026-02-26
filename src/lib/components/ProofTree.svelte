@@ -66,13 +66,15 @@
         ctxMenu.pruneSuccess = false;
 
         try {
-            await appState.client.proofPruneTo(appState.proof, node.id);
+            await appState.client.proofPruneTo(node.id);
             ctxMenu.pruneSuccess = true;
         } catch (err) {
             ctxMenu.pruneError = err?.toString?.() ?? "Unknown error";
         } finally {
             ctxMenu.pruning = false;
         }
+
+        appState.proofTreeChanged.notify();
     }
 
     //Opens the context menu when user right-clicks a node
@@ -407,7 +409,8 @@
                         <button
                             class="ctx-prune-btn"
                             disabled={ctxMenu.pruning || ctxMenu.pruneSuccess}
-                            onclick={() => ctxMenu.node && pruneTo(ctxMenu.node)}
+                            onclick={() =>
+                                ctxMenu.node && pruneTo(ctxMenu.node)}
                         >
                             {#if ctxMenu.pruning}
                                 Pruning…
@@ -419,7 +422,9 @@
                         </button>
 
                         {#if ctxMenu.pruneError}
-                            <div class="ctx-mono error">{ctxMenu.pruneError}</div>
+                            <div class="ctx-mono error">
+                                {ctxMenu.pruneError}
+                            </div>
                         {/if}
                     </div>
                 {/if}
