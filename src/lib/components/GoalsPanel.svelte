@@ -1,36 +1,90 @@
 <script lang="ts">
-    import type { NodeDesc } from "../../routes/api";
+    import type { ProofId, TreeNodeDesc, NodeId } from "../../routes/api";
 
     let { appState } = $props();
 
-    let goals = $state<NodeDesc[]>([]);
+    let openGoals = $state<TreeNodeDesc[]>([]);
+    let loading = $state(false);
 
-    async function loadOpenGoals(client: any, proof: any) {
-        const goals = await client.proofGoals(proof, true, true);
-        return goals;
+    // Rerun when proof tree changes (load, auto proof, etc.)
+    const proofTreeWaker = appState.proofTreeChanged.subscribe();
+
+    async function collectOpenGoalNodesFromTree(
+        client: any,
+        proof: ProofId,
+    ): Promise<TreeNodeDesc[]> {
+        const result: TreeNodeDesc[] = [];
+
+        const root: TreeNodeDesc = await client.proofTreeRoot(proof);
+
+        // BFS/DFS over the proof tree using proofTree/children
+        const stack: TreeNodeDesc[] = [root];
+        const visited = new Set<string>();
+
+        while (stack.length > 0) {
+            const node = stack.pop()!;
+            const key = node.id.nodeId;
+            if (visited.has(key)) continue;
+            visited.add(key);
+
+            const name = (node.name ?? "").toLowerCase();
+            if (name.includes("open goal")) {
+                result.push(node);
+            }
+
+            // fetch children and continue
+            const children = await client.proofTreeChildren(proof, node.id);
+            for (const c of children) stack.push(c);
+        }
+
+        return result;
     }
 
-    // Reload whenever a new proof is loaded
-    $effect(() => {
-        if (appState.proof == null) {
+    async function reload() {
+        if (!appState.proof) {
+            openGoals = [];
             return;
         }
 
-        loadOpenGoals(appState.client, appState.proof).then((res) => {
-            goals = res;
-        });
+        loading = true;
+        try {
+            openGoals = await collectOpenGoalNodesFromTree(appState.client, appState.proof);
+        } finally {
+            loading = false;
+        }
+    }
+
+    $effect(() => {
+        $proofTreeWaker; // track signal
+        reload();
     });
+
+    function selectNode(id: NodeId) {
+        // clicking an open goal selects it in the app
+        appState.active_node = id;
+    }
 </script>
 
 <div class="panel">
     <h3>Goals</h3>
 
-    <div>Open goals: {goals.length}</div>
-    <ul>
-        {#each goals as goal}
-            <li>{goal.description}</li>
-        {/each}
-    </ul>
+    {#if loading}
+        <div>Loading…</div>
+    {:else}
+        <div>Open goals: {openGoals.length}</div>
+
+        {#if openGoals.length === 0}
+            <div class="empty">No open goals found.</div>
+        {:else}
+            <ul>
+                {#each openGoals as g}
+                    <li class="goal" on:click={() => selectNode(g.id)}>
+                        {g.name}
+                    </li>
+                {/each}
+            </ul>
+        {/if}
+    {/if}
 </div>
 
 <style>
@@ -52,7 +106,20 @@
         padding-left: 18px;
     }
 
-    .panel li {
+    .goal {
         margin: 4px 0;
+        word-break: break-word;
+        cursor: pointer;
     }
+
+    .goal:hover {
+        text-decoration: underline;
+    }
+
+    .empty {
+        opacity: 0.8;
+        font-style: italic;
+        margin-top: 6px;
+    }
+
 </style>
