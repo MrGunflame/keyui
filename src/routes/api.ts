@@ -97,6 +97,10 @@ export class Client {
         return await this.send("goal/actions", [id, caretPosition]);
     }
 
+    public async applyAction(id: TermActionId): Promise<boolean> {
+        return await this.send("goal/apply_action", [id]);
+    }
+
     /// Saves the proof with the given ID to the given file path.
     ///
     /// The proof must have been loaded previously and not yet been disposed.
