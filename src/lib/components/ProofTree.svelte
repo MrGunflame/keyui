@@ -20,6 +20,9 @@
         appliedOn: string | null;
         loading: boolean;
         error: string | null;
+        pruning: boolean;
+        pruneError: string | null;
+        pruneSuccess: boolean;
     };
 
     let ctxMenu = $state<CtxMenuState>({
@@ -30,6 +33,9 @@
         appliedOn: null,
         loading: false,
         error: null,
+        pruning: false,
+        pruneError: null,
+        pruneSuccess: false,
     });
 
     //check if a node is a closed goal
@@ -53,6 +59,24 @@
         return res.result as string;
     }
 
+    //Prunes the proof to the right-clicked node using proof/pruneTo
+    async function pruneTo(node: TreeNodeDesc) {
+        ctxMenu.pruning = true;
+        ctxMenu.pruneError = null;
+        ctxMenu.pruneSuccess = false;
+
+        try {
+            await appState.client.proofPruneTo(node.id);
+            ctxMenu.pruneSuccess = true;
+        } catch (err) {
+            ctxMenu.pruneError = err?.toString?.() ?? "Unknown error";
+        } finally {
+            ctxMenu.pruning = false;
+        }
+
+        appState.proofTreeChanged.notify();
+    }
+
     //Opens the context menu when user right-clicks a node
     function openCtxMenu(e: MouseEvent, node: TreeNodeDesc) {
         e.preventDefault();
@@ -67,6 +91,9 @@
                 appliedOn: null,
                 loading: false,
                 error: null,
+                pruning: false,
+                pruneError: null,
+                pruneSuccess: false,
             };
             return;
         }
@@ -80,6 +107,9 @@
             appliedOn: null,
             loading: true,
             error: null,
+            pruning: false,
+            pruneError: null,
+            pruneSuccess: false,
         };
 
         //Fetch the sequent in the background
@@ -314,6 +344,8 @@
                             oncontextmenu={(e) => openCtxMenu(e, item.node)}
                         >
                             {#if !isLeaf(index)}
+                                <!-- svelte-ignore a11y_click_events_have_key_events -->
+                                <!-- svelte-ignore a11y_no_static_element_interactions -->
                                 <span
                                     class="collapse-icon"
                                     onclick={(e) => {
@@ -338,6 +370,8 @@
     </ul>
 
     {#if ctxMenu.open}
+        <!-- svelte-ignore a11y_click_events_have_key_events -->
+        <!-- svelte-ignore a11y_no_static_element_interactions -->
         <div class="ctx-backdrop" onclick={closeCtxMenu}>
             <div
                 class="ctx-menu"
@@ -368,6 +402,28 @@
                         {:else}
                             <div class="ctx-mono">
                                 {ctxMenu.appliedOn ?? "-"}
+                            </div>
+                        {/if}
+                        <div class="ctx-sep"></div>
+
+                        <button
+                            class="ctx-prune-btn"
+                            disabled={ctxMenu.pruning || ctxMenu.pruneSuccess}
+                            onclick={() =>
+                                ctxMenu.node && pruneTo(ctxMenu.node)}
+                        >
+                            {#if ctxMenu.pruning}
+                                Pruning…
+                            {:else if ctxMenu.pruneSuccess}
+                                ✓ Pruned
+                            {:else}
+                                ✂ Prune to here
+                            {/if}
+                        </button>
+
+                        {#if ctxMenu.pruneError}
+                            <div class="ctx-mono error">
+                                {ctxMenu.pruneError}
                             </div>
                         {/if}
                     </div>
@@ -619,5 +675,37 @@
 
     .node.closed.active {
         opacity: 0.9;
+    }
+    .ctx-prune-btn {
+        width: 100%;
+        padding: 8px 12px;
+        border-radius: 8px;
+        border: 1px solid rgba(255, 160, 80, 0.4);
+        background: rgba(255, 160, 80, 0.1);
+        color: rgba(255, 180, 100, 0.95);
+        font-size: 13px;
+        font-weight: 650;
+        cursor: pointer;
+        transition:
+            background 120ms ease,
+            border-color 120ms ease,
+            opacity 120ms ease;
+        text-align: center;
+    }
+
+    .ctx-prune-btn:hover:not(:disabled) {
+        background: rgba(255, 160, 80, 0.2);
+        border-color: rgba(255, 160, 80, 0.7);
+    }
+
+    .ctx-prune-btn:disabled {
+        cursor: default;
+        opacity: 0.65;
+    }
+
+    .ctx-prune-btn:disabled.pruned {
+        border-color: rgba(80, 200, 120, 0.4);
+        background: rgba(80, 200, 120, 0.1);
+        color: rgba(100, 220, 140, 0.95);
     }
 </style>

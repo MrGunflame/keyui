@@ -93,6 +93,10 @@ export class Client {
         return await this.send("proof/auto", [proof, options_framed]);
     }
 
+    public async proofPruneTo(id: NodeId): Promise<NodeDesc[]> {
+        return await this.send("proof/pruneTo", [id]);
+    }
+
     public async goalActions(id: NodeTextId, caretPosition: number) {
         return await this.send("goal/actions", [id, caretPosition]);
     }
