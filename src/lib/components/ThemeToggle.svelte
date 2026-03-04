@@ -26,7 +26,10 @@
     let fontScale: number = 1;
 
     function applyFontScale(scale: number) {
-        document.documentElement.style.setProperty("--font-scale", String(scale));
+        document.documentElement.style.setProperty(
+            "--font-scale",
+            String(scale),
+        );
     }
 
     function saveFontScale(scale: number) {
@@ -59,26 +62,32 @@
     });
 </script>
 
-<button on:click={toggle} class="theme-btn">
-    {theme === "dark" ? "Light" : "Dark"}
-</button>
+<div class="settings-wrapper">
+    <button on:click={toggle} class="theme-btn">
+        {theme === "dark" ? "Light" : "Dark"}
+    </button>
 
-<div class="font-slider">
-    <label>
-        Font size
-        <input
-            type="range"
-            min="0.8"
-            max="1.6"
-            step="0.05"
-            bind:value={fontScale}
-            on:input={() => saveFontScale(fontScale)}
-        />
-        <span>{Math.round(fontScale * 100)}%</span>
-    </label>
+    <div class="font-slider">
+        <label>
+            Font size
+            <input
+                type="range"
+                min="0.8"
+                max="1.6"
+                step="0.05"
+                bind:value={fontScale}
+                on:input={() => saveFontScale(fontScale)}
+            />
+            <span>{Math.round(fontScale * 100)}%</span>
+        </label>
+    </div>
 </div>
 
 <style>
+    .settings-wrapper {
+        display: flex;
+    }
+
     .theme-btn {
         border: 1px solid var(--c-border);
         background: var(--c-panel);
@@ -93,7 +102,6 @@
     }
 
     .font-slider {
-        margin-top: 10px;
         display: flex;
         align-items: center;
         gap: 8px;
