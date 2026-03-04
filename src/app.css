@@ -1,6 +1,10 @@
 :root {
   color-scheme: dark;
 
+  /* ===== Font Scaling ===== */
+  --font-scale: 1;
+  --base-font-size: 16px;
+
   --c-bg: #141414;
   --c-panel: #252525;
   --c-panel-2: #1f1f1f;
@@ -54,4 +58,15 @@ body {
   margin: 0;
   background: var(--c-bg);
   color: var(--c-text);
+  font-size: calc(var(--base-font-size) * var(--font-scale));
+}
+
+/*
+  This should be unnecessary since this is already derived from the body rule,
+  however it seems the default "User Agent Stylesheet" rule has higher priority
+  than the body rule.
+  We need to duplicate this rule in order for buttons to have the correct size.
+ */
+button {
+  font-size: calc(var(--base-font-size) * var(--font-scale));
 }
