@@ -1,9 +1,12 @@
 <script lang="ts">
-    import type {
-        TermActionDesc,
-        NodeTextSpan,
-        TermActionId,
+    import { asClassComponent } from "svelte/legacy";
+    import {
+        type TermActionDesc,
+        type NodeTextSpan,
+        type TermActionId,
+        TermActionKind,
     } from "../../routes/api";
+    import RuleList from "./sequent/RuleList.svelte";
 
     let { appState, sequent } = $props();
 
@@ -76,7 +79,7 @@
         return output;
     }
 
-    let spans = expandTerms(sequent.result, sequent.terms, 0, 0);
+    const spans = expandTerms(sequent.result, sequent.terms, 0, 0);
     let hoveredElement = $state<number | null>(null);
 
     function onMouseOver(index: number) {
@@ -97,18 +100,28 @@
         return spans[hoveredElement].spans.includes(index);
     }
 
+    type Actions = {
+        taclets: TermActionDesc[];
+        macros: TermActionDesc[];
+        other: TermActionDesc[];
+    };
+
     type ContextMenuState = {
         open: boolean;
         x: number;
         y: number;
-        actions: TermActionDesc[];
+        actions: Actions;
     };
 
     let contextMenuState = $state<ContextMenuState>({
-        open: true,
+        open: false,
         x: 0,
         y: 0,
-        actions: [],
+        actions: {
+            taclets: [],
+            macros: [],
+            other: [],
+        },
     });
 
     function onClick(event: MouseEvent, index: number) {
@@ -117,11 +130,27 @@
         appState.client
             .goalActions(sequent.id, textStart)
             .then((actions: TermActionDesc[]) => {
+                const taclets = actions.filter(
+                    (a) => a.kind === TermActionKind.Taclet,
+                );
+                const macros = actions.filter(
+                    (a) => a.kind === TermActionKind.Macro,
+                );
+                const other = actions.filter(
+                    (a) =>
+                        a.kind != TermActionKind.Taclet &&
+                        a.kind != TermActionKind.Macro,
+                );
+
                 contextMenuState = {
                     open: true,
                     x: event.pageX,
                     y: event.pageY,
-                    actions,
+                    actions: {
+                        taclets,
+                        macros,
+                        other,
+                    },
                 };
             });
     }
@@ -161,15 +190,23 @@
             class="ctx-menu"
             style="top: {contextMenuState.y}px; left: {contextMenuState.x}px;"
         >
-            <ul>
-                {#each contextMenuState.actions as action}
-                    <li>
-                        <button onclick={() => applyAction(action.commandId)}
-                            >{action.displayName}</button
-                        >
-                    </li>
-                {/each}
-            </ul>
+            <div class="action-list">
+                <RuleList
+                    name={"Taclet"}
+                    actions={contextMenuState.actions.taclets}
+                    onApply={(action) => applyAction(action.commandId)}
+                />
+                <RuleList
+                    name={"Macros"}
+                    actions={contextMenuState.actions.macros}
+                    onApply={(action) => applyAction(action.commandId)}
+                />
+                <RuleList
+                    name={"Other"}
+                    actions={contextMenuState.actions.other}
+                    onApply={(action) => applyAction(action.commandId)}
+                />
+            </div>
         </div>
     {/if}
 </div>
@@ -204,9 +241,8 @@
         z-index: 1000;
     }
 
-    .ctx-menu ul {
-        list-style-type: none;
-        padding: 0;
-        margin: 0;
+    .action-list {
+        display: flex;
+        overflow: scroll;
     }
 </style>
