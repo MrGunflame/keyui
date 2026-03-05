@@ -210,11 +210,18 @@ export type TermActionDesc = {
     displayName: string;
     description: string;
     category: string | null;
-    // kind: TermActionKind;
+    kind: TermActionKind;
 };
 
 export type TermActionId = {
     nodeId: NodeId;
     pio: string;
     id: string;
+};
+
+export enum TermActionKind {
+    Builtin = 0,
+    Script = 1,
+    Macro = 2,
+    Taclet = 3,
 };
