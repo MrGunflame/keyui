@@ -7,6 +7,7 @@
         TermActionKind,
     } from "../../routes/api";
     import RuleList from "./sequent/RuleList.svelte";
+    import ContextMenu from "./ContextMenu.svelte";
 
     let { appState, sequent } = $props();
 
@@ -185,30 +186,32 @@
         </span>
     {/each}
 
-    {#if contextMenuState.open}
-        <div
-            class="ctx-menu"
-            style="top: {contextMenuState.y}px; left: {contextMenuState.x}px;"
-        >
-            <div class="action-list">
-                <RuleList
-                    name={"Taclet"}
-                    actions={contextMenuState.actions.taclets}
-                    onApply={(action) => applyAction(action.commandId)}
-                />
-                <RuleList
-                    name={"Macros"}
-                    actions={contextMenuState.actions.macros}
-                    onApply={(action) => applyAction(action.commandId)}
-                />
-                <RuleList
-                    name={"Other"}
-                    actions={contextMenuState.actions.other}
-                    onApply={(action) => applyAction(action.commandId)}
-                />
-            </div>
+    <ContextMenu
+        open={contextMenuState.open}
+        onClose={() => (contextMenuState.open = false)}
+        positionX={contextMenuState.x}
+        positionY={contextMenuState.y}
+    >
+        <div class="action-list">
+            <RuleList
+                name={"Taclet"}
+                actions={contextMenuState.actions.taclets}
+                onApply={(action) => applyAction(action.commandId)}
+            />
+            <RuleList
+                name={"Macros"}
+                actions={contextMenuState.actions.macros}
+                onApply={(action) => applyAction(action.commandId)}
+            />
+            <RuleList
+                name={"Other"}
+                actions={contextMenuState.actions.other}
+                onApply={(action) => applyAction(action.commandId)}
+            />
         </div>
-    {/if}
+    </ContextMenu>
+
+    {#if contextMenuState.open}{/if}
 </div>
 
 <style>
@@ -229,16 +232,6 @@
 
     .span-hover {
         background-color: gray;
-    }
-
-    .ctx-menu {
-        position: absolute;
-        background: var(--c-panel-2);
-        padding: 5px;
-        border: 1px solid #444;
-        border-radius: 8px;
-        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4);
-        z-index: 1000;
     }
 
     .action-list {
