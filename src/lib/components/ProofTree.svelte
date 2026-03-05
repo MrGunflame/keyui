@@ -1,5 +1,5 @@
 <script lang="ts">
-    import type { TreeNodeDesc } from "../../routes/api";
+    import type { NodeTextDesc, TreeNodeDesc } from "../../routes/api";
 
     let { appState } = $props();
 
@@ -18,6 +18,7 @@
         y: number;
         node: TreeNodeDesc | null;
         appliedOn: string | null;
+        appliedTacletRule: string | null;
         loading: boolean;
         error: string | null;
         pruning: boolean;
@@ -31,6 +32,7 @@
         y: 0,
         node: null,
         appliedOn: null,
+        appliedTacletRule: null,
         loading: false,
         error: null,
         pruning: false,
@@ -56,7 +58,7 @@
 
         //goalPrint takes a NodeId
         const res = await appState.client.goalPrint(nodeId, options);
-        return res.result as string;
+        return res;
     }
 
     //Prunes the proof to the right-clicked node using proof/pruneTo
@@ -89,6 +91,7 @@
                 y: e.clientY,
                 node,
                 appliedOn: null,
+                appliedTacletRule: null,
                 loading: false,
                 error: null,
                 pruning: false,
@@ -105,6 +108,7 @@
             y: e.clientY,
             node,
             appliedOn: null,
+            appliedTacletRule: null,
             loading: true,
             error: null,
             pruning: false,
@@ -113,12 +117,14 @@
         };
 
         //Fetch the sequent in the background
+
         fetchAppliedOn(node.id)
-            .then((text) => {
+            .then((res: NodeTextDesc) => {
                 if (!ctxMenu.open || ctxMenu.node?.id.nodeId !== node.id.nodeId)
                     return;
 
-                ctxMenu.appliedOn = text;
+                ctxMenu.appliedOn = res.result;
+                ctxMenu.appliedTacletRule = res.tacletApplicationInfo;
                 ctxMenu.loading = false;
             })
             .catch((err) => {
@@ -405,6 +411,12 @@
                             </div>
                         {/if}
                         <div class="ctx-sep"></div>
+
+                        {#if ctxMenu.appliedTacletRule != null}
+                            <div class="ctx-mono">
+                                {ctxMenu.appliedTacletRule}
+                            </div>
+                        {/if}
 
                         <button
                             class="ctx-prune-btn"
