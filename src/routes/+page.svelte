@@ -82,7 +82,7 @@ println!("Hello from Rust + Tauri!");
     {#if errorState}
         <Modal open={true} on:close={() => (errorState = null)}>
             <h2>Error</h2>
-            <pre>
+            <pre class="error-state-pre">
 <code>{errorState}</code>
 </pre>
         </Modal>
@@ -173,5 +173,11 @@ println!("Hello from Rust + Tauri!");
 
     .flex-10 {
         flex-grow: 10;
+    }
+
+    /* Don't let the <code> exceed <pre>. */
+    .error-state-pre {
+        display: flex;
+        overflow: scroll;
     }
 </style>
