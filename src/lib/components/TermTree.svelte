@@ -171,6 +171,78 @@
                 // TODO: Post error to error widget.
             });
     }
+
+    // --- Rust syntax highlighting ---
+
+    const RUST_KEYWORDS = new Set([
+        "as", "async", "await", "break", "const", "continue", "crate", "dyn",
+        "else", "enum", "extern", "false", "fn", "for", "if", "impl", "in",
+        "let", "loop", "match", "mod", "move", "mut", "pub", "ref", "return",
+        "self", "Self", "static", "struct", "super", "trait", "true", "type",
+        "unsafe", "use", "where", "while",
+    ]);
+
+    const RUST_TYPES = new Set([
+        "i8", "i16", "i32", "i64", "i128", "isize",
+        "u8", "u16", "u32", "u64", "u128", "usize",
+        "f32", "f64", "bool", "char", "str", "String",
+        "Vec", "Option", "Result", "Box", "Rc", "Arc",
+        "HashMap", "HashSet", "BTreeMap", "BTreeSet",
+        "Cell", "RefCell", "Mutex", "RwLock",
+    ]);
+
+    type RustTokenKind =
+        | "keyword"
+        | "type"
+        | "number"
+        | "string"
+        | "comment"
+        | "lifetime"
+        | "macro"
+        | "operator"
+        | "punctuation"
+        | "plain";
+
+    function rustTokenKind(token: string): RustTokenKind {
+        const t = token.trim();
+        if (t === "") return "plain";
+
+        // Line comment
+        if (t.startsWith("//")) return "comment";
+
+        // String / char literal
+        if (
+            (t.startsWith('"') && t.endsWith('"')) ||
+            (t.startsWith("'") && t.endsWith("'") && t.length > 2) ||
+            (t.startsWith('b"') && t.endsWith('"')) ||
+            t.startsWith('r#"')
+        ) return "string";
+
+        // Lifetime  e.g. 'a  'static
+        if (/^'[a-z_][a-z0-9_]*$/.test(t)) return "lifetime";
+
+        // Macro call  e.g. println!
+        if (/^[a-z_][a-z0-9_]*!$/.test(t)) return "macro";
+
+        // Keywords
+        if (RUST_KEYWORDS.has(t)) return "keyword";
+
+        // Built-in types
+        if (RUST_TYPES.has(t)) return "type";
+
+        // Numbers: integer, float, hex, binary, octal with optional suffix
+        if (/^-?(?:0x[0-9a-fA-F_]+|0b[01_]+|0o[0-7_]+|[0-9][0-9_]*(?:\.[0-9_]+)?(?:[eE][+-]?[0-9_]+)?)(?:_?(?:i8|i16|i32|i64|i128|isize|u8|u16|u32|u64|u128|usize|f32|f64))?$/.test(t))
+            return "number";
+
+        // Operators
+        if (/^(?:=>|->|::|\.\.=|\.\.|\+=|-=|\*=|\/=|%=|&&|\|\||[+\-*/%&|^!<>=?@~]+)$/.test(t))
+            return "operator";
+
+        // Punctuation
+        if (/^[{}()[\];:,.]$/.test(t)) return "punctuation";
+
+        return "plain";
+    }
 </script>
 
 <div class="tree">
@@ -180,6 +252,7 @@
             onmouseout={(e) => onMouseOut(index)}
             onclick={(e) => onClick(e, index)}
             class:span-hover={isMarked(index)}
+            class="rust-{rustTokenKind(span.content)}"
         >
             {span.content}
         </span>
@@ -230,6 +303,18 @@
     .span-hover {
         background-color: gray;
     }
+
+    /* Rust syntax highlighting */
+    .rust-keyword   { color: #cc99cd; font-weight: 600; }
+    .rust-type      { color: #4ec9b0; }
+    .rust-number    { color: #b5cea8; }
+    .rust-string    { color: #ce9178; }
+    .rust-comment   { color: #6a9955; font-style: italic; }
+    .rust-lifetime  { color: #d7ba7d; }
+    .rust-macro     { color: #dcdcaa; }
+    .rust-operator  { color: #d4d4d4; }
+    .rust-punctuation { color: #808080; }
+    .rust-plain     { color: inherit; }
 
     .ctx-menu {
         position: absolute;
