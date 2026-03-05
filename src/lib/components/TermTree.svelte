@@ -233,7 +233,7 @@
 
     .ctx-menu {
         position: absolute;
-        background: #1f1f1f;
+        background: var(--c-panel-2);
         padding: 5px;
         border: 1px solid #444;
         border-radius: 8px;
