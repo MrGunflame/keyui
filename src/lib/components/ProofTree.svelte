@@ -1,5 +1,6 @@
 <script lang="ts">
     import type { NodeTextDesc, TreeNodeDesc } from "../../routes/api";
+    import ContextMenu from "./ContextMenu.svelte";
 
     let { appState } = $props();
 
@@ -375,74 +376,70 @@
         {/each}
     </ul>
 
-    {#if ctxMenu.open}
-        <!-- svelte-ignore a11y_click_events_have_key_events -->
-        <!-- svelte-ignore a11y_no_static_element_interactions -->
-        <div class="ctx-backdrop" onclick={closeCtxMenu}>
-            <div
-                class="ctx-menu"
-                style="left:{ctxMenu.x}px; top:{ctxMenu.y}px;"
-                onclick={(e) => e.stopPropagation()}
-            >
-                {#if ctxMenu.node?.name?.toLowerCase() === "closed goal"}
-                    <div class="ctx-simple">A closed goal</div>
-                {:else}
-                    <div class="ctx-title">Taclet info</div>
+    <ContextMenu
+        open={ctxMenu.open}
+        positionX={ctxMenu.x}
+        positionY={ctxMenu.y}
+        onClose={() => (ctxMenu.open = false)}
+    >
+        <div class="ctx-menu">
+            {#if ctxMenu.node?.name?.toLowerCase() === "closed goal"}
+                <div class="ctx-simple">A closed goal</div>
+            {:else}
+                <div class="ctx-title">Taclet info</div>
 
-                    <div class="ctx-content">
-                        <div class="ctx-row">
-                            <div class="ctx-label">Rule</div>
-                            <div class="ctx-value">
-                                {ctxMenu.node?.name ?? "-"}
-                            </div>
+                <div class="ctx-content">
+                    <div class="ctx-row">
+                        <div class="ctx-label">Rule</div>
+                        <div class="ctx-value">
+                            {ctxMenu.node?.name ?? "-"}
                         </div>
-
-                        <div class="ctx-sep"></div>
-
-                        <div class="ctx-label">Applied on</div>
-
-                        {#if ctxMenu.loading}
-                            <div class="ctx-mono loading">Loading…</div>
-                        {:else if ctxMenu.error}
-                            <div class="ctx-mono error">{ctxMenu.error}</div>
-                        {:else}
-                            <div class="ctx-mono">
-                                {ctxMenu.appliedOn ?? "-"}
-                            </div>
-                        {/if}
-                        <div class="ctx-sep"></div>
-
-                        {#if ctxMenu.appliedTacletRule != null}
-                            <div class="ctx-mono">
-                                {ctxMenu.appliedTacletRule}
-                            </div>
-                        {/if}
-
-                        <button
-                            class="ctx-prune-btn"
-                            disabled={ctxMenu.pruning || ctxMenu.pruneSuccess}
-                            onclick={() =>
-                                ctxMenu.node && pruneTo(ctxMenu.node)}
-                        >
-                            {#if ctxMenu.pruning}
-                                Pruning…
-                            {:else if ctxMenu.pruneSuccess}
-                                ✓ Pruned
-                            {:else}
-                                ✂ Prune to here
-                            {/if}
-                        </button>
-
-                        {#if ctxMenu.pruneError}
-                            <div class="ctx-mono error">
-                                {ctxMenu.pruneError}
-                            </div>
-                        {/if}
                     </div>
-                {/if}
-            </div>
+
+                    <div class="ctx-sep"></div>
+
+                    <div class="ctx-label">Applied on</div>
+
+                    {#if ctxMenu.loading}
+                        <div class="ctx-mono loading">Loading…</div>
+                    {:else if ctxMenu.error}
+                        <div class="ctx-mono error">{ctxMenu.error}</div>
+                    {:else}
+                        <div class="ctx-mono">
+                            {ctxMenu.appliedOn ?? "-"}
+                        </div>
+                    {/if}
+                    <div class="ctx-sep"></div>
+
+                    {#if ctxMenu.appliedTacletRule != null}
+                        <div class="ctx-mono">
+                            {ctxMenu.appliedTacletRule}
+                        </div>
+                    {/if}
+
+                    <button
+                        class="ctx-prune-btn"
+                        disabled={ctxMenu.pruning || ctxMenu.pruneSuccess}
+                        onclick={() => ctxMenu.node && pruneTo(ctxMenu.node)}
+                    >
+                        {#if ctxMenu.pruning}
+                            Pruning…
+                        {:else if ctxMenu.pruneSuccess}
+                            ✓ Pruned
+                        {:else}
+                            ✂ Prune to here
+                        {/if}
+                    </button>
+
+                    {#if ctxMenu.pruneError}
+                        <div class="ctx-mono error">
+                            {ctxMenu.pruneError}
+                        </div>
+                    {/if}
+                </div>
+            {/if}
         </div>
-    {/if}
+    </ContextMenu>
 </div>
 
 <style>
@@ -596,17 +593,9 @@
     }
 
     .ctx-menu {
-        position: fixed;
-        z-index: 1000;
         min-width: 260px;
         max-width: 420px;
-        background: var(--c-panel-2);
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        border-radius: 12px;
         padding: 10px 12px;
-        box-shadow: 0 18px 45px rgba(0, 0, 0, 0.55);
-        backdrop-filter: blur(10px);
-        transform: translate(8px, 8px);
     }
 
     .ctx-title {
