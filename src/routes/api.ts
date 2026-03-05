@@ -157,6 +157,7 @@ export type NodeTextDesc = {
     id: NodeTextId;
     result: string;
     terms: NodeTextSpan[];
+    tacletApplicationInfo: string | null;
 };
 
 export type NodeTextSpan = {
