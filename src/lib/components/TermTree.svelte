@@ -1,19 +1,15 @@
 <script lang="ts">
-    import { asClassComponent } from "svelte/legacy";
-    import {
-        type TermActionDesc,
-        type NodeTextSpan,
-        type TermActionId,
-        TermActionKind,
+    import type {
+        TermActionDesc,
+        NodeTextSpan,
+        TermActionId,
     } from "../../routes/api";
-    import RuleList from "./sequent/RuleList.svelte";
 
     let { appState, sequent } = $props();
 
     type Span = {
         content: string;
         // All span indices that are associated with this span.
-        // This includes all children.
         // These should be marked when the span is hovered.
         spans: number[];
         // The character index where the text for this span starts.
@@ -79,7 +75,7 @@
         return output;
     }
 
-    const spans = expandTerms(sequent.result, sequent.terms, 0, 0);
+    let spans = expandTerms(sequent.result, sequent.terms, 0, 0);
     let hoveredElement = $state<number | null>(null);
 
     function onMouseOver(index: number) {
@@ -100,28 +96,18 @@
         return spans[hoveredElement].spans.includes(index);
     }
 
-    type Actions = {
-        taclets: TermActionDesc[];
-        macros: TermActionDesc[];
-        other: TermActionDesc[];
-    };
-
     type ContextMenuState = {
         open: boolean;
         x: number;
         y: number;
-        actions: Actions;
+        actions: TermActionDesc[];
     };
 
     let contextMenuState = $state<ContextMenuState>({
-        open: false,
+        open: true,
         x: 0,
         y: 0,
-        actions: {
-            taclets: [],
-            macros: [],
-            other: [],
-        },
+        actions: [],
     });
 
     function onClick(event: MouseEvent, index: number) {
@@ -130,27 +116,11 @@
         appState.client
             .goalActions(sequent.id, textStart)
             .then((actions: TermActionDesc[]) => {
-                const taclets = actions.filter(
-                    (a) => a.kind === TermActionKind.Taclet,
-                );
-                const macros = actions.filter(
-                    (a) => a.kind === TermActionKind.Macro,
-                );
-                const other = actions.filter(
-                    (a) =>
-                        a.kind != TermActionKind.Taclet &&
-                        a.kind != TermActionKind.Macro,
-                );
-
                 contextMenuState = {
                     open: true,
                     x: event.pageX,
                     y: event.pageY,
-                    actions: {
-                        taclets,
-                        macros,
-                        other,
-                    },
+                    actions,
                 };
             });
     }
@@ -172,76 +142,69 @@
             });
     }
 
-    // --- Rust syntax highlighting ---
+    import hljs from "highlight.js";
+    import "highlight.js/styles/github-dark.css";
 
-    const RUST_KEYWORDS = new Set([
-        "as", "async", "await", "break", "const", "continue", "crate", "dyn",
-        "else", "enum", "extern", "false", "fn", "for", "if", "impl", "in",
-        "let", "loop", "match", "mod", "move", "mut", "pub", "ref", "return",
-        "self", "Self", "static", "struct", "super", "trait", "true", "type",
-        "unsafe", "use", "where", "while",
-    ]);
+    // Build a char-position → hljs class lookup from hljs HTML output.
+    // hljs.highlight() returns HTML like:
+    //   <span class="hljs-keyword">if</span> b <span class="hljs-number">3u32</span>
+    // We strip the tags and record which class was active at each char index.
+    function buildHljsColorMap(text: string, language: string): string[] {
+        const result = hljs.highlight(text, { language, ignoreIllegals: true });
+        const html = result.value;
 
-    const RUST_TYPES = new Set([
-        "i8", "i16", "i32", "i64", "i128", "isize",
-        "u8", "u16", "u32", "u64", "u128", "usize",
-        "f32", "f64", "bool", "char", "str", "String",
-        "Vec", "Option", "Result", "Box", "Rc", "Arc",
-        "HashMap", "HashSet", "BTreeMap", "BTreeSet",
-        "Cell", "RefCell", "Mutex", "RwLock",
-    ]);
+        const colorMap: string[] = new Array(text.length).fill("");
+        let charPos = 0;
+        let currentClass = "";
 
-    type RustTokenKind =
-        | "keyword"
-        | "type"
-        | "number"
-        | "string"
-        | "comment"
-        | "lifetime"
-        | "macro"
-        | "operator"
-        | "punctuation"
-        | "plain";
+        // Simple HTML parser — walks through the hljs output char by char.
+        let i = 0;
+        while (i < html.length) {
+            if (html[i] === "<") {
+                const tagEnd = html.indexOf(">", i);
+                if (tagEnd === -1) break;
+                const tag = html.slice(i + 1, tagEnd);
 
-    function rustTokenKind(token: string): RustTokenKind {
-        const t = token.trim();
-        if (t === "") return "plain";
+                if (tag.startsWith("/span")) {
+                    currentClass = "";
+                } else if (tag.startsWith("span")) {
+                    // Extract class name from e.g. 'span class="hljs-keyword"'
+                    const m = tag.match(/class="([^"]+)"/);
+                    currentClass = m ? m[1] : "";
+                }
+                i = tagEnd + 1;
+            } else {
+                // Decode basic HTML entities that hljs emits
+                let ch: string;
+                if (html.startsWith("&amp;", i))  { ch = "&";  i += 5; }
+                else if (html.startsWith("&lt;", i))   { ch = "<";  i += 4; }
+                else if (html.startsWith("&gt;", i))   { ch = ">";  i += 4; }
+                else if (html.startsWith("&quot;", i)) { ch = '"';  i += 6; }
+                else                                    { ch = html[i]; i += 1; }
 
-        // Line comment
-        if (t.startsWith("//")) return "comment";
+                if (charPos < colorMap.length) {
+                    colorMap[charPos] = currentClass;
+                    charPos++;
+                }
+            }
+        }
 
-        // String / char literal
-        if (
-            (t.startsWith('"') && t.endsWith('"')) ||
-            (t.startsWith("'") && t.endsWith("'") && t.length > 2) ||
-            (t.startsWith('b"') && t.endsWith('"')) ||
-            t.startsWith('r#"')
-        ) return "string";
+        return colorMap;
+    }
 
-        // Lifetime  e.g. 'a  'static
-        if (/^'[a-z_][a-z0-9_]*$/.test(t)) return "lifetime";
+    const hljsColorMap = buildHljsColorMap(sequent.result, "rust");
 
-        // Macro call  e.g. println!
-        if (/^[a-z_][a-z0-9_]*!$/.test(t)) return "macro";
-
-        // Keywords
-        if (RUST_KEYWORDS.has(t)) return "keyword";
-
-        // Built-in types
-        if (RUST_TYPES.has(t)) return "type";
-
-        // Numbers: integer, float, hex, binary, octal with optional suffix
-        if (/^-?(?:0x[0-9a-fA-F_]+|0b[01_]+|0o[0-7_]+|[0-9][0-9_]*(?:\.[0-9_]+)?(?:[eE][+-]?[0-9_]+)?)(?:_?(?:i8|i16|i32|i64|i128|isize|u8|u16|u32|u64|u128|usize|f32|f64))?$/.test(t))
-            return "number";
-
-        // Operators
-        if (/^(?:=>|->|::|\.\.=|\.\.|\+=|-=|\*=|\/=|%=|&&|\|\||[+\-*/%&|^!<>=?@~]+)$/.test(t))
-            return "operator";
-
-        // Punctuation
-        if (/^[{}()[\];:,.]$/.test(t)) return "punctuation";
-
-        return "plain";
+    // Returns the hljs class for a given span based on its textStart position.
+    // Uses the first non-whitespace character of the span for best accuracy.
+    function hljsClassForSpan(span: Span): string {
+        const text = span.content;
+        for (let i = 0; i < text.length; i++) {
+            if (text[i].trim() !== "") {
+                const pos = span.textStart + i;
+                return hljsColorMap[pos] ?? "";
+            }
+        }
+        return "";
     }
 </script>
 
@@ -252,7 +215,7 @@
             onmouseout={(e) => onMouseOut(index)}
             onclick={(e) => onClick(e, index)}
             class:span-hover={isMarked(index)}
-            class="rust-{rustTokenKind(span.content)}"
+            class={hljsClassForSpan(span)}
         >
             {span.content}
         </span>
@@ -263,23 +226,15 @@
             class="ctx-menu"
             style="top: {contextMenuState.y}px; left: {contextMenuState.x}px;"
         >
-            <div class="action-list">
-                <RuleList
-                    name={"Taclet"}
-                    actions={contextMenuState.actions.taclets}
-                    onApply={(action) => applyAction(action.commandId)}
-                />
-                <RuleList
-                    name={"Macros"}
-                    actions={contextMenuState.actions.macros}
-                    onApply={(action) => applyAction(action.commandId)}
-                />
-                <RuleList
-                    name={"Other"}
-                    actions={contextMenuState.actions.other}
-                    onApply={(action) => applyAction(action.commandId)}
-                />
-            </div>
+            <ul>
+                {#each contextMenuState.actions as action}
+                    <li>
+                        <button onclick={() => applyAction(action.commandId)}
+                            >{action.displayName}</button
+                        >
+                    </li>
+                {/each}
+            </ul>
         </div>
     {/if}
 </div>
@@ -304,17 +259,9 @@
         background-color: gray;
     }
 
-    /* Rust syntax highlighting */
-    .rust-keyword   { color: #cc99cd; font-weight: 600; }
-    .rust-type      { color: #4ec9b0; }
-    .rust-number    { color: #b5cea8; }
-    .rust-string    { color: #ce9178; }
-    .rust-comment   { color: #6a9955; font-style: italic; }
-    .rust-lifetime  { color: #d7ba7d; }
-    .rust-macro     { color: #dcdcaa; }
-    .rust-operator  { color: #d4d4d4; }
-    .rust-punctuation { color: #808080; }
-    .rust-plain     { color: inherit; }
+    .span-hover {
+        background-color: gray;
+    }
 
     .ctx-menu {
         position: absolute;
@@ -326,8 +273,9 @@
         z-index: 1000;
     }
 
-    .action-list {
-        display: flex;
-        overflow: scroll;
+    .ctx-menu ul {
+        list-style-type: none;
+        padding: 0;
+        margin: 0;
     }
 </style>
