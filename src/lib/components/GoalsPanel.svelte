@@ -48,7 +48,10 @@
 
         loading = true;
         try {
-            openGoals = await collectOpenGoalNodesFromTree(appState.client, appState.proof);
+            openGoals = await collectOpenGoalNodesFromTree(
+                appState.client,
+                appState.proof,
+            );
         } finally {
             loading = false;
         }
@@ -65,38 +68,27 @@
     }
 </script>
 
-<div class="panel">
-    <h3>Goals</h3>
+<h3>Goals</h3>
 
-    {#if loading}
-        <div>Loading…</div>
+{#if loading}
+    <div>Loading…</div>
+{:else}
+    <div>Open goals: {openGoals.length}</div>
+
+    {#if openGoals.length === 0}
+        <div class="empty">No open goals found.</div>
     {:else}
-        <div>Open goals: {openGoals.length}</div>
-
-        {#if openGoals.length === 0}
-            <div class="empty">No open goals found.</div>
-        {:else}
-            <ul>
-                {#each openGoals as g}
-                    <li class="goal" on:click={() => selectNode(g.id)}>
-                        {g.name}
-                    </li>
-                {/each}
-            </ul>
-        {/if}
+        <ul>
+            {#each openGoals as g}
+                <li class="goal" on:click={() => selectNode(g.id)}>
+                    {g.name}
+                </li>
+            {/each}
+        </ul>
     {/if}
-</div>
+{/if}
 
 <style>
-    .panel {
-        background: var(--c-panel);
-        color: var(--c-text);
-        border: 1px solid var(--c-border);
-        border-radius: 8px;
-        padding: 10px;
-        height: 100%;
-    }
-
     .panel h3 {
         margin-top: 0;
     }
@@ -121,5 +113,4 @@
         font-style: italic;
         margin-top: 6px;
     }
-
 </style>
