@@ -148,6 +148,28 @@
         return "unknown";
     }
 
+    // Returns the status of a virtual node's branch based on its descendants
+    function virtualStatus(index: number): "open" | "closed" | "mixed" {
+        let hasOpen = false;
+        let hasClosed = false;
+        const currentDepth = nodes[index]?.depth ?? 0;
+
+        for (let i = index + 1; i < nodes.length; i++) {
+            const item = nodes[i];
+            if (item.depth <= currentDepth) break;
+            if (item.kind !== "real") continue;
+
+            const s = statusFromName(item.node.name);
+            if (s === "open") hasOpen = true;
+            if (s === "closed") hasClosed = true;
+            if (hasOpen && hasClosed) return "mixed";
+        }
+
+        if (hasOpen) return "open";
+        if (hasClosed) return "closed";
+        return "open"; // fallback: treat unknown as open
+    }
+
     function isLeaf(index: number) {
         const currentDepth = nodes[index]?.depth ?? 0;
         const nextDepth = nodes[index + 1]?.depth ?? -1;
@@ -369,7 +391,7 @@
                             {Number(item.node.id.nodeId)}: {item.node.name}
                         </button>
                     {:else}
-                        <div class="virtual">{item.label}</div>
+                        <div class="virtual {virtualStatus(index)}">{item.label}</div>
                     {/if}
                 </li>
             {/if}
@@ -549,6 +571,22 @@
         background: rgba(255, 255, 255, 0.04);
         font-weight: 600;
     }
+    
+    .virtual.open {
+        border-color: rgba(255, 100, 100, 0.45);
+        background: rgba(255, 80, 80, 0.1);
+    }
+
+    .virtual.closed {
+        border-color: rgba(80, 200, 120, 0.45);
+        background: rgba(80, 200, 120, 0.1);
+    }
+
+    .virtual.mixed {
+        border-color: rgba(255, 180, 60, 0.45);
+        background: rgba(255, 180, 60, 0.08);
+    }
+
 
     .collapse-icon {
         display: inline-flex;
