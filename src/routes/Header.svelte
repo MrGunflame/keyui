@@ -2,7 +2,7 @@
     import ThemeToggle from "$lib/components/ThemeToggle.svelte";
     import Menu from "./Menu.svelte";
     import FilePicker from "./FilePicker.svelte";
-    import { open } from "@tauri-apps/plugin-fs";
+    import { save } from "@tauri-apps/plugin-dialog";
 
     let { appState, onError } = $props();
 
@@ -23,6 +23,25 @@
     function tryOpenKeyFile(path: string) {
         openKeyFile(path).catch((err) => onError(err.toString()));
     }
+    async function saveProofTo(path: string) {
+    await appState.client.saveProof(appState.proof, path);
+}
+
+async function onSaveProof() {
+    if (!appState.proof) {
+        onError("No proof loaded");
+        return;
+    }
+
+    const path = await save({
+        title: "Save proof",
+        defaultPath: "proof.proof",
+    });
+
+    if (!path) return; // user cancelled
+
+    saveProofTo(path).catch((err) => onError(err.toString()));
+}
 </script>
 
 <div class="header">
@@ -35,6 +54,9 @@
                         <li>
                             <FilePicker action={tryOpenKeyFile}>Open</FilePicker
                             >
+                        </li>
+                        <li>
+                            <button onclick={onSaveProof}>Save</button>
                         </li>
                     </ul>
                 </Menu>
