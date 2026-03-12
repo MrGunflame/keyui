@@ -1,6 +1,6 @@
 <script lang="ts">
     import type { NodeTextDesc, TreeNodeDesc } from "$lib/api";
-    import ContextMenu from "./ContextMenu.svelte";
+    import ContextMenu from "$lib/components/ContextMenu.svelte";
 
     let { appState } = $props();
 
