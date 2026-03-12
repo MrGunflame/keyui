@@ -7,7 +7,7 @@
     import Sequent from "$lib/panel/Sequent.svelte";
     import Panel from "$lib/panel/Panel.svelte";
     import type { ProofId, NodeId } from "../lib/api";
-    import Modal from "./Modal.svelte";
+    import Modal from "$lib/Modal.svelte";
 
     import { ReactiveSignal } from "$lib/reactive";
     import { writable, type Writable } from "svelte/store";
