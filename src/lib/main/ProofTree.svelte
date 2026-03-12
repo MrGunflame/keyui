@@ -253,29 +253,6 @@
         return matchesSearch(node.node) || hasMatchingDescendant(index);
     }
 
-    // DEV ONLY: show a small fake tree when no proof is loaded (so we can work on UI)
-    // DEV ONLY: keep FALSE for PR
-    const DEMO_TREE = false;
-
-    function makeDemoNodes(): Node[] {
-        const fake = (nodeId: number, name: string) =>
-            ({ id: { nodeId }, name }) as unknown as TreeNodeDesc;
-
-        return [
-            { kind: "real", node: fake(1, "OPEN Root"), depth: 0 },
-            { kind: "real", node: fake(2, "OPEN Step 1"), depth: 0 },
-            { kind: "real", node: fake(3, "OPEN Step 2"), depth: 0 },
-            { kind: "real", node: fake(4, "OPEN Step 3"), depth: 0 },
-
-            { kind: "real", node: fake(5, "OPEN Branching Rule"), depth: 0 },
-            { kind: "virtual", label: "5.1", depth: 1 },
-            { kind: "real", node: fake(6, "CLOSED Left leaf"), depth: 2 },
-            { kind: "virtual", label: "5.2", depth: 1 },
-            { kind: "real", node: fake(7, "OPEN Right path"), depth: 2 },
-            { kind: "real", node: fake(8, "CLOSED Right leaf"), depth: 2 },
-        ];
-    }
-
     async function loadTreeCollapsed(client: any, proof: any): Promise<Node[]> {
         const out: Node[] = [];
 
@@ -328,7 +305,6 @@
         $waker;
 
         if (appState.proof == null) {
-            nodes = DEMO_TREE ? makeDemoNodes() : [];
             return;
         }
 
