@@ -1,5 +1,5 @@
 <script lang="ts">
-    import ThemeToggle from "$lib/components/ThemeToggle.svelte";
+    import ThemeToggle from "./ThemeToggle.svelte";
     import Menu from "./Menu.svelte";
     import FilePicker from "./FilePicker.svelte";
     import { save } from "@tauri-apps/plugin-dialog";
@@ -9,7 +9,7 @@
     let file_menu_active = $state(false);
 
     function toggleMenu() {
-        file_menu_active ^= true;
+        file_menu_active = !file_menu_active;
     }
 
     async function openKeyFile(path: string) {

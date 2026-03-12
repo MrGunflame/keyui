@@ -1,5 +1,5 @@
 <script lang="ts">
-    import Header from "./Header.svelte";
+    import Header from "$lib/components/header/Header.svelte";
     import Api from "./Api.svelte";
     import { Client } from "./api";
     import CodeBlock from "$lib/CodeBlock.svelte";
