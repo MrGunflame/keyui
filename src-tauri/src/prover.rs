@@ -4,33 +4,32 @@ use std::ffi::OsStr;
 use std::io;
 use std::process::Stdio;
 use std::str::FromStr;
-use std::sync::OnceLock;
 
 use bstr::BString;
 use futures::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt};
 use futures::{pin_mut, select, FutureExt};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
+use tauri::State;
 use thiserror::Error;
 use tokio::sync::{mpsc, oneshot};
 
-static CHANNEL: OnceLock<mpsc::UnboundedSender<(String, Value, oneshot::Sender<Value>)>> =
-    OnceLock::new();
-
 #[tauri::command]
-pub async fn send_msg(method: String, params: Value) -> Value {
-    let tx = CHANNEL.get().unwrap();
-
+pub async fn send_msg(
+    state: State<'_, crate::State>,
+    method: String,
+    params: Value,
+) -> tauri::Result<Value> {
+    let tx = state.channel.clone();
     let (resp_tx, resp_rx) = oneshot::channel();
 
     tx.send((method, params, resp_tx)).unwrap();
     let resp = resp_rx.await.unwrap();
-    resp
+    Ok(resp)
 }
 
-pub fn start_prover() {
+pub fn start_prover() -> mpsc::UnboundedSender<(String, Value, oneshot::Sender<Value>)> {
     let (tx, rx) = mpsc::unbounded_channel::<(String, Value, oneshot::Sender<Value>)>();
-    CHANNEL.set(tx).unwrap();
 
     std::thread::spawn(move || {
         let mut jar_path = std::env::current_dir().unwrap();
@@ -38,8 +37,8 @@ pub fn start_prover() {
 
         async_io::block_on(async move {
             if let Err(err) = run_cmd(&jar_path, rx).await {
-                eprintln!("Failed to start prover: {}", err);
-                eprintln!(
+                log::error!("failed to start prover: {}", err);
+                log::error!(
                     "Please ensure java is available in $PATH and the api is placed at {}",
                     jar_path.to_string_lossy()
                 );
@@ -47,6 +46,8 @@ pub fn start_prover() {
             }
         });
     });
+
+    tx
 }
 
 async fn run_cmd(
@@ -61,8 +62,8 @@ async fn run_cmd(
         .stdout(Stdio::piped())
         .spawn()?;
 
-    let stdin = child.stdin.take().unwrap();
-    let stdout = child.stdout.take().unwrap();
+    let stdin = child.stdin.take().expect("failed to open stdio");
+    let stdout = child.stdout.take().expect("failed to open stdout");
     let mut writer = Writer::new(stdin);
     let mut reader = Reader::new(stdout);
 
@@ -92,7 +93,7 @@ async fn run_cmd(
                 let id = next_id;
                 next_id += 1;
 
-                writer.send(&method, params, id).await.unwrap();
+                writer.send(&method, params, id).await?;
 
                 inflight.insert(id, resp_tx);
             }
@@ -141,10 +142,9 @@ impl<W> Writer<W> {
 
         let buf = serde_json::to_string(&req).unwrap();
 
-        dbg!("TX", serde_json::from_str::<Value>(&buf).unwrap());
+        log::debug!("sending {:?}", serde_json::from_str::<Value>(&buf).unwrap());
 
         let framed = format!("Content-Length: {}\r\n\r\n{}", buf.len(), buf);
-        dbg!(&framed);
 
         self.writer.write_all(framed.as_bytes()).await?;
         Ok(())
@@ -176,7 +176,8 @@ impl<R> Reader<R> {
                 Ok((msg, bytes_consumed)) => {
                     let resp =
                         serde_json::from_slice::<Message>(msg).map_err(ReadError::InvalidJson)?;
-                    dbg!(&resp);
+
+                    log::debug!("received {:?}", resp);
 
                     debug_assert!(self.bytes_init >= bytes_consumed);
                     self.buf.copy_within(bytes_consumed.., 0);
@@ -200,8 +201,6 @@ impl<R> Reader<R> {
             };
 
             self.bytes_init += bytes_read;
-
-            dbg!(bstr::BStr::new(&self.buf[..self.bytes_init]));
         }
     }
 }
@@ -215,17 +214,6 @@ pub enum Message {
         #[serde(flatten)]
         msg: Value,
     },
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
-#[serde(untagged)]
-pub enum ResponseMessage {
-    #[serde(rename = "result")]
-    Result(Value),
-    #[serde(rename = "error")]
-    Err(Value),
-    #[serde(untagged)]
-    Null(Value),
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
