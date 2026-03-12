@@ -1,13 +1,12 @@
 <script lang="ts">
     import Header from "$lib/components/header/Header.svelte";
-    import Api from "./Api.svelte";
-    import { Client } from "./api";
+    import { Client } from "$lib/api";
     import CodeBlock from "$lib/CodeBlock.svelte";
     import ProofTree from "$lib/components/ProofTree.svelte";
     import GoalsPanel from "$lib/components/GoalsPanel.svelte";
     import Sequent from "$lib/panel/Sequent.svelte";
     import Panel from "$lib/panel/Panel.svelte";
-    import type { ProofId, NodeId } from "./api";
+    import type { ProofId, NodeId } from "../lib/api";
     import Modal from "./Modal.svelte";
 
     import { ReactiveSignal } from "$lib/reactive";

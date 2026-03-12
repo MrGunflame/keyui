@@ -1,11 +1,10 @@
 <script lang="ts">
-    import { asClassComponent } from "svelte/legacy";
     import {
         type TermActionDesc,
         type NodeTextSpan,
         type TermActionId,
         TermActionKind,
-    } from "../../routes/api";
+    } from "$lib/api";
     import RuleList from "./sequent/RuleList.svelte";
     import ContextMenu from "./ContextMenu.svelte";
 

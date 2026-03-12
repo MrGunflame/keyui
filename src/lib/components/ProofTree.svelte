@@ -1,5 +1,5 @@
 <script lang="ts">
-    import type { NodeTextDesc, TreeNodeDesc } from "../../routes/api";
+    import type { NodeTextDesc, TreeNodeDesc } from "$lib/api";
     import ContextMenu from "./ContextMenu.svelte";
 
     let { appState } = $props();
@@ -391,7 +391,9 @@
                             {Number(item.node.id.nodeId)}: {item.node.name}
                         </button>
                     {:else}
-                        <div class="virtual {virtualStatus(index)}">{item.label}</div>
+                        <div class="virtual {virtualStatus(index)}">
+                            {item.label}
+                        </div>
                     {/if}
                 </li>
             {/if}
@@ -571,7 +573,7 @@
         background: rgba(255, 255, 255, 0.04);
         font-weight: 600;
     }
-    
+
     .virtual.open {
         border-color: rgba(255, 100, 100, 0.45);
         background: rgba(255, 80, 80, 0.1);
@@ -586,7 +588,6 @@
         border-color: rgba(255, 180, 60, 0.45);
         background: rgba(255, 180, 60, 0.08);
     }
-
 
     .collapse-icon {
         display: inline-flex;

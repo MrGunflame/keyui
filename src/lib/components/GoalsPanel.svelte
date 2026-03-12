@@ -1,5 +1,5 @@
 <script lang="ts">
-    import type { ProofId, TreeNodeDesc, NodeId } from "../../routes/api";
+    import type { ProofId, TreeNodeDesc, NodeId } from "$lib/api";
 
     let { appState } = $props();
 

@@ -1,5 +1,5 @@
 <script lang="ts">
-    import type { TermActionDesc } from "../../../routes/api";
+    import type { TermActionDesc } from "$lib/api";
 
     type Props = {
         name: string;
