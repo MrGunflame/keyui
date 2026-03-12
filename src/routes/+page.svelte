@@ -10,7 +10,7 @@
     import Modal from "$lib/Modal.svelte";
 
     import { ReactiveSignal } from "$lib/reactive";
-    import { writable, type Writable } from "svelte/store";
+    import AutoProofButton from "$lib/AutoProofButton.svelte";
 
     type AppState = {
         client: Client;
@@ -30,37 +30,6 @@
     });
 
     let errorState: string | null = $state(null);
-
-    const rustExample = `
-fn main() {
-println!("Hello from Rust + Tauri!");
-}
-`;
-
-    async function autoProof() {
-        if (!appState.proof) {
-            return;
-        }
-
-        const options = {
-            method: null,
-            dep: null,
-            query: null,
-            nonLinArith: null,
-            maxSteps: 1000,
-        };
-
-        try {
-            const status = await appState.client.proofAuto(
-                appState.proof,
-                options,
-            );
-            console.log(status);
-            appState.proofTreeChanged.notify();
-        } catch (err: any) {
-            errorState = err?.toString?.() ?? String(err);
-        }
-    }
 </script>
 
 <main class="main">
@@ -68,13 +37,7 @@ println!("Hello from Rust + Tauri!");
         <Header {appState} onError={(error: any) => (errorState = error)} />
 
         <div class="actions">
-            <button
-                class="play"
-                on:click={autoProof}
-                disabled={!appState.proof}
-            >
-                ▶ Auto Proof
-            </button>
+            <AutoProofButton {appState} onError={(err) => (errorState = err)} />
         </div>
     </div>
 
@@ -104,13 +67,6 @@ println!("Hello from Rust + Tauri!");
             </Panel>
         </div>
     </div>
-
-    <!--
-<section class="code-section">
-<h2>Rust example</h2>
-<CodeBlock language="rust" code={rustExample} />
-</section>
--->
 </main>
 
 <style>
@@ -150,20 +106,6 @@ println!("Hello from Rust + Tauri!");
         display: flex;
         gap: 10px;
         align-items: center;
-    }
-
-    .play {
-        padding: 8px 12px;
-        border: none;
-        cursor: pointer;
-        border-radius: 6px;
-        background-color: white;
-        color: black;
-    }
-
-    .play:disabled {
-        opacity: 0.5;
-        cursor: not-allowed;
     }
 
     .flex-1 {
