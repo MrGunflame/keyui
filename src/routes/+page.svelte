@@ -1,17 +1,16 @@
 <script lang="ts">
-    import Header from "./Header.svelte";
-    import Api from "./Api.svelte";
-    import { Client } from "./api";
-    import CodeBlock from "$lib/CodeBlock.svelte";
-    import ProofTree from "$lib/components/ProofTree.svelte";
-    import GoalsPanel from "$lib/components/GoalsPanel.svelte";
-    import Sequent from "$lib/panel/Sequent.svelte";
-    import Panel from "$lib/panel/Panel.svelte";
-    import type { ProofId, NodeId } from "./api";
-    import Modal from "./Modal.svelte";
+    import Header from "$lib/components/header/Header.svelte";
+    import { Client } from "$lib/api";
+    import CodeBlock from "$lib/components/CodeBlock.svelte";
+    import ProofTree from "$lib/main/ProofTree.svelte";
+    import GoalsPanel from "$lib/main/GoalsPanel.svelte";
+    import Sequent from "$lib/main/Sequent.svelte";
+    import Panel from "$lib/main/Panel.svelte";
+    import type { ProofId, NodeId } from "../lib/api";
+    import Modal from "$lib/Modal.svelte";
 
     import { ReactiveSignal } from "$lib/reactive";
-    import { writable, type Writable } from "svelte/store";
+    import AutoProofButton from "$lib/AutoProofButton.svelte";
 
     type AppState = {
         client: Client;
@@ -31,37 +30,6 @@
     });
 
     let errorState: string | null = $state(null);
-
-    const rustExample = `
-fn main() {
-println!("Hello from Rust + Tauri!");
-}
-`;
-
-    async function autoProof() {
-        if (!appState.proof) {
-            return;
-        }
-
-        const options = {
-            method: null,
-            dep: null,
-            query: null,
-            nonLinArith: null,
-            maxSteps: 1000,
-        };
-
-        try {
-            const status = await appState.client.proofAuto(
-                appState.proof,
-                options,
-            );
-            console.log(status);
-            appState.proofTreeChanged.notify();
-        } catch (err: any) {
-            errorState = err?.toString?.() ?? String(err);
-        }
-    }
 </script>
 
 <main class="main">
@@ -69,13 +37,7 @@ println!("Hello from Rust + Tauri!");
         <Header {appState} onError={(error: any) => (errorState = error)} />
 
         <div class="actions">
-            <button
-                class="play"
-                on:click={autoProof}
-                disabled={!appState.proof}
-            >
-                ▶ Auto Proof
-            </button>
+            <AutoProofButton {appState} onError={(err) => (errorState = err)} />
         </div>
     </div>
 
@@ -105,13 +67,6 @@ println!("Hello from Rust + Tauri!");
             </Panel>
         </div>
     </div>
-
-    <!--
-<section class="code-section">
-<h2>Rust example</h2>
-<CodeBlock language="rust" code={rustExample} />
-</section>
--->
 </main>
 
 <style>
@@ -151,20 +106,6 @@ println!("Hello from Rust + Tauri!");
         display: flex;
         gap: 10px;
         align-items: center;
-    }
-
-    .play {
-        padding: 8px 12px;
-        border: none;
-        cursor: pointer;
-        border-radius: 6px;
-        background-color: white;
-        color: black;
-    }
-
-    .play:disabled {
-        opacity: 0.5;
-        cursor: not-allowed;
     }
 
     .flex-1 {

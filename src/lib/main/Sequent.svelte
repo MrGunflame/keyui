@@ -4,8 +4,9 @@
         Client,
         NodeId,
         NodeTextDesc,
+        PrintOptions,
         ProofId,
-    } from "../../routes/api";
+    } from "../api";
 
     let { appState } = $props();
 
@@ -20,7 +21,7 @@
         node: NodeId,
         width: number,
     ) {
-        const options = {
+        const options: PrintOptions = {
             unicode: false,
             width,
             indentation: 0,
@@ -53,13 +54,11 @@
             return;
         }
 
-        const w = width;
-
         fetchSequent(
             appState.client,
             appState.proof,
             appState.active_node,
-            w,
+            width,
         ).then((seq) => {
             sequent = seq;
         });

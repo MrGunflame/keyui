@@ -1,5 +1,5 @@
 <script lang="ts">
-    import type { ProofId, TreeNodeDesc, NodeId } from "../../routes/api";
+    import type { ProofId, TreeNodeDesc, NodeId } from "$lib/api";
 
     let { appState } = $props();
 
@@ -27,7 +27,7 @@
             if (visited.has(key)) continue;
             visited.add(key);
 
-            const name = (node.name ?? "").toLowerCase();
+            const name = node.name.toLowerCase();
             if (name.includes("open goal")) {
                 result.push(node);
             }
@@ -52,6 +52,8 @@
                 appState.client,
                 appState.proof,
             );
+        } catch (err) {
+            console.error(err);
         } finally {
             loading = false;
         }
@@ -80,8 +82,10 @@
     {:else}
         <ul>
             {#each openGoals as g}
-                <li class="goal" on:click={() => selectNode(g.id)}>
-                    {g.name}
+                <li class="goal">
+                    <button onclick={() => selectNode(g.id)}>
+                        {g.id.nodeId}: {g.name}
+                    </button>
                 </li>
             {/each}
         </ul>
@@ -89,15 +93,6 @@
 {/if}
 
 <style>
-    .panel h3 {
-        margin-top: 0;
-    }
-
-    .panel ul {
-        margin: 0;
-        padding-left: 18px;
-    }
-
     .goal {
         margin: 4px 0;
         word-break: break-word;
@@ -106,6 +101,10 @@
 
     .goal:hover {
         text-decoration: underline;
+    }
+
+    .goal > button {
+        cursor: pointer;
     }
 
     .empty {
