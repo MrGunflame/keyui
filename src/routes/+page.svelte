@@ -2,10 +2,10 @@
     import Header from "$lib/components/header/Header.svelte";
     import { Client } from "$lib/api";
     import CodeBlock from "$lib/components/CodeBlock.svelte";
-    import ProofTree from "$lib/panel/ProofTree.svelte";
-    import GoalsPanel from "$lib/panel/GoalsPanel.svelte";
-    import Sequent from "$lib/panel/Sequent.svelte";
-    import Panel from "$lib/panel/Panel.svelte";
+    import ProofTree from "$lib/main/ProofTree.svelte";
+    import GoalsPanel from "$lib/main/GoalsPanel.svelte";
+    import Sequent from "$lib/main/Sequent.svelte";
+    import Panel from "$lib/main/Panel.svelte";
     import type { ProofId, NodeId } from "../lib/api";
     import Modal from "$lib/Modal.svelte";
 
