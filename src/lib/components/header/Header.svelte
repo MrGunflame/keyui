@@ -27,16 +27,16 @@
     async function saveProof() {
         if (!appState.proof) return;
 
-        const path = await save({
-            filters: [
-                {
-                    name: ".proof",
-                    extensions: [".proof"],
-                },
-            ],
-        });
-
         try {
+            const path = await save({
+                filters: [
+                    {
+                        name: ".proof",
+                        extensions: [".proof"],
+                    },
+                ],
+            });
+
             await appState.client.saveProof(appState.proof, path);
         } catch (err) {
             onError(err);

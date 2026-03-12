@@ -26,7 +26,6 @@
             return;
         }
 
-        console.log(path);
         action(path);
     }
 </script>
