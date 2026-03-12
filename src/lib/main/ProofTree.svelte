@@ -1,6 +1,7 @@
 <script lang="ts">
-    import type { NodeTextDesc, TreeNodeDesc } from "$lib/api";
+    import type { TreeNodeDesc } from "$lib/api";
     import ContextMenu from "$lib/components/ContextMenu.svelte";
+    import NodeInfo from "$lib/components/proof_tree/NodeInfo.svelte";
 
     let { appState } = $props();
 
@@ -18,13 +19,6 @@
         x: number;
         y: number;
         node: TreeNodeDesc | null;
-        appliedOn: string | null;
-        appliedTacletRule: string | null;
-        loading: boolean;
-        error: string | null;
-        pruning: boolean;
-        pruneError: string | null;
-        pruneSuccess: boolean;
     };
 
     let ctxMenu = $state<CtxMenuState>({
@@ -32,113 +26,17 @@
         x: 0,
         y: 0,
         node: null,
-        appliedOn: null,
-        appliedTacletRule: null,
-        loading: false,
-        error: null,
-        pruning: false,
-        pruneError: null,
-        pruneSuccess: false,
     });
-
-    //check if a node is a closed goal
-    function isClosedGoal(node: TreeNodeDesc | null) {
-        if (!node) return false;
-        return node.name.toLowerCase().includes("closed goal");
-    }
-
-    //Fetches the sequent for a given node using the goal/print API
-    async function fetchAppliedOn(nodeId: any) {
-        const options = {
-            unicode: false,
-            width: 120,
-            indentation: 0,
-            pure: false,
-            termLabels: true,
-        };
-
-        //goalPrint takes a NodeId
-        const res = await appState.client.goalPrint(nodeId, options);
-        return res;
-    }
-
-    //Prunes the proof to the right-clicked node using proof/pruneTo
-    async function pruneTo(node: TreeNodeDesc) {
-        ctxMenu.pruning = true;
-        ctxMenu.pruneError = null;
-        ctxMenu.pruneSuccess = false;
-
-        try {
-            await appState.client.proofPruneTo(node.id);
-            ctxMenu.pruneSuccess = true;
-        } catch (err) {
-            ctxMenu.pruneError = err?.toString?.() ?? "Unknown error";
-        } finally {
-            ctxMenu.pruning = false;
-        }
-
-        appState.proofTreeChanged.notify();
-    }
 
     //Opens the context menu when user right-clicks a node
     function openCtxMenu(e: MouseEvent, node: TreeNodeDesc) {
         e.preventDefault();
-
-        // If it's a closed goal: don't fetch anything
-        if (isClosedGoal(node)) {
-            ctxMenu = {
-                open: true,
-                x: e.clientX,
-                y: e.clientY,
-                node,
-                appliedOn: null,
-                appliedTacletRule: null,
-                loading: false,
-                error: null,
-                pruning: false,
-                pruneError: null,
-                pruneSuccess: false,
-            };
-            return;
-        }
-
-        //Normal nodes : fetch "AppliedOn" using goalPrint
         ctxMenu = {
             open: true,
             x: e.clientX,
             y: e.clientY,
             node,
-            appliedOn: null,
-            appliedTacletRule: null,
-            loading: true,
-            error: null,
-            pruning: false,
-            pruneError: null,
-            pruneSuccess: false,
         };
-
-        //Fetch the sequent in the background
-
-        fetchAppliedOn(node.id)
-            .then((res: NodeTextDesc) => {
-                if (!ctxMenu.open || ctxMenu.node?.id.nodeId !== node.id.nodeId)
-                    return;
-
-                ctxMenu.appliedOn = res.result;
-                ctxMenu.appliedTacletRule = res.tacletApplicationInfo;
-                ctxMenu.loading = false;
-            })
-            .catch((err) => {
-                if (!ctxMenu.open || ctxMenu.node?.id.nodeId !== node.id.nodeId)
-                    return;
-
-                ctxMenu.error = err?.toString?.() ?? "Unknown error";
-                ctxMenu.loading = false;
-            });
-    }
-
-    function closeCtxMenu() {
-        ctxMenu.open = false;
     }
 
     function statusFromName(name: string) {
@@ -228,14 +126,16 @@
     function hasMatchingDescendant(index: number): boolean {
         if (!searchQuery.trim()) return false;
 
-        const currentDepth = nodes[index]?.depth ?? 0;
+        const currentDepth = nodes[index]?.depth;
 
         for (let i = index + 1; i < nodes.length; i++) {
-            if (nodes[i].depth <= currentDepth) break;
+            const node = nodes[i];
 
-            if (nodes[i].kind === "virtual") return true;
+            if (node.depth <= currentDepth) break;
 
-            if (matchesSearch(nodes[i].node)) return true;
+            if (node.kind === "virtual") return true;
+
+            if (matchesSearch(node.node)) return true;
         }
         return false;
     }
@@ -383,61 +283,11 @@
         onClose={() => (ctxMenu.open = false)}
     >
         <div class="ctx-menu">
-            {#if ctxMenu.node?.name?.toLowerCase() === "closed goal"}
-                <div class="ctx-simple">A closed goal</div>
-            {:else}
-                <div class="ctx-title">Taclet info</div>
-
-                <div class="ctx-content">
-                    <div class="ctx-row">
-                        <div class="ctx-label">Rule</div>
-                        <div class="ctx-value">
-                            {ctxMenu.node?.name ?? "-"}
-                        </div>
-                    </div>
-
-                    <div class="ctx-sep"></div>
-
-                    <div class="ctx-label">Applied on</div>
-
-                    {#if ctxMenu.loading}
-                        <div class="ctx-mono loading">Loading…</div>
-                    {:else if ctxMenu.error}
-                        <div class="ctx-mono error">{ctxMenu.error}</div>
-                    {:else}
-                        <div class="ctx-mono">
-                            {ctxMenu.appliedOn ?? "-"}
-                        </div>
-                    {/if}
-                    <div class="ctx-sep"></div>
-
-                    {#if ctxMenu.appliedTacletRule != null}
-                        <div class="ctx-mono">
-                            {ctxMenu.appliedTacletRule}
-                        </div>
-                    {/if}
-
-                    <button
-                        class="ctx-prune-btn"
-                        disabled={ctxMenu.pruning || ctxMenu.pruneSuccess}
-                        onclick={() => ctxMenu.node && pruneTo(ctxMenu.node)}
-                    >
-                        {#if ctxMenu.pruning}
-                            Pruning…
-                        {:else if ctxMenu.pruneSuccess}
-                            ✓ Pruned
-                        {:else}
-                            ✂ Prune to here
-                        {/if}
-                    </button>
-
-                    {#if ctxMenu.pruneError}
-                        <div class="ctx-mono error">
-                            {ctxMenu.pruneError}
-                        </div>
-                    {/if}
-                </div>
-            {/if}
+            <NodeInfo
+                {appState}
+                nodeId={ctxMenu.node!.id}
+                nodeName={ctxMenu.node!.name}
+            />
         </div>
     </ContextMenu>
 </div>
@@ -594,86 +444,10 @@
         background: var(--c-node-unknown);
     }
 
-    .ctx-backdrop {
-        position: fixed;
-        inset: 0;
-        z-index: 999;
-    }
-    .ctx-simple {
-        padding: 10px 12px;
-        font-size: 13px;
-        font-weight: 600;
-        opacity: 0.95;
-        white-space: nowrap;
-    }
-
     .ctx-menu {
         min-width: 260px;
         max-width: 420px;
         padding: 10px 12px;
-    }
-
-    .ctx-title {
-        font-size: 12px;
-        font-weight: 700;
-        letter-spacing: 0.2px;
-        opacity: 0.9;
-        padding: 6px 2px 10px 2px;
-        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-        margin-bottom: 10px;
-    }
-
-    .ctx-content {
-        display: grid;
-        gap: 10px;
-    }
-
-    .ctx-row {
-        display: grid;
-        grid-template-columns: 92px 1fr;
-        gap: 10px;
-        align-items: baseline;
-    }
-
-    .ctx-label {
-        font-size: 12px;
-        opacity: 0.7;
-    }
-
-    .ctx-value {
-        font-size: 13px;
-        font-weight: 650;
-    }
-
-    .ctx-sep {
-        height: 1px;
-        background: rgba(255, 255, 255, 0.08);
-        margin: 2px 0;
-    }
-
-    .ctx-mono {
-        font-family:
-            ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
-            "Liberation Mono", "Courier New", monospace;
-        font-size: 12px;
-        line-height: 1.35;
-
-        white-space: pre-wrap;
-        word-break: break-word;
-
-        padding: 8px 10px;
-        border-radius: 10px;
-        background: rgba(255, 255, 255, 0.06);
-        border: 1px solid rgba(255, 255, 255, 0.08);
-    }
-
-    .ctx-mono.loading {
-        opacity: 0.75;
-    }
-
-    .ctx-mono.error {
-        border-color: rgba(255, 120, 120, 0.35);
-        background: rgba(255, 120, 120, 0.1);
     }
 
     .node.active {
@@ -691,37 +465,5 @@
 
     .node.closed.active {
         opacity: 0.9;
-    }
-    .ctx-prune-btn {
-        width: 100%;
-        padding: 8px 12px;
-        border-radius: 8px;
-        border: 1px solid rgba(255, 160, 80, 0.4);
-        background: rgba(255, 160, 80, 0.1);
-        color: rgba(255, 180, 100, 0.95);
-        font-size: 13px;
-        font-weight: 650;
-        cursor: pointer;
-        transition:
-            background 120ms ease,
-            border-color 120ms ease,
-            opacity 120ms ease;
-        text-align: center;
-    }
-
-    .ctx-prune-btn:hover:not(:disabled) {
-        background: rgba(255, 160, 80, 0.2);
-        border-color: rgba(255, 160, 80, 0.7);
-    }
-
-    .ctx-prune-btn:disabled {
-        cursor: default;
-        opacity: 0.65;
-    }
-
-    .ctx-prune-btn:disabled.pruned {
-        border-color: rgba(80, 200, 120, 0.4);
-        background: rgba(80, 200, 120, 0.1);
-        color: rgba(100, 220, 140, 0.95);
     }
 </style>
